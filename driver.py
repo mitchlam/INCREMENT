@@ -19,11 +19,39 @@ class Instance:
         
     @staticmethod
     def distance(x,y):
-        return Distance.euclidean(x,y)
+        return Distance.euclidean(x.data,y.data)
+
+
+def confusion(clustering):
+    labels = [-1]*len(clustering)
+
+    conf = {}
+
+    for i,cluster in enumerate(clustering):
+        trueVals = map(lambda x: x.label, cluster)
+        label = utils.mode(trueVals)
+        
+        for l in trueVals:
+            if l not in conf:
+                conf[l] = [0]*len(labels)
+            
+            conf[l][i] += 1
+
+        
+        
+        
+
+    final = []
+    for key,value in conf.items():
+        final.append(value)
+
+    #print "Final Error : %d of %d" % (error, total)
+    return final
 
 def checkAccuracy(clustering):
     labels = [-1]*len(clustering)
 
+    conf = {}
     error = 0.0
     total = 0
     for cluster in clustering:
@@ -34,6 +62,10 @@ def checkAccuracy(clustering):
         
         e = 0.0
         for l in trueVals:
+            if l not in conf:
+                conf[l] = [0]*len(labels)
+            
+            conf[l][label] += 1
             if l != label:
                 e += 1
         
@@ -41,7 +73,10 @@ def checkAccuracy(clustering):
         error += e
         total += len(cluster)
         
-    #print "Final Error : %d of %d: %f" % (error, total, error/total)
+    if total == 0:
+        return (0,0,0)
+    
+    #print "Final Error : %d of %d" % (error, total)
     return (error, total, error/total)
 
 def main(args):
@@ -71,8 +106,12 @@ def main(args):
         clusters[y].append(Instance(x,t))
 
     print "Initial Error: %d of %d: %f" % (checkAccuracy(clusters))
+    conf = confusion(clusters)
     
-    increment = INCREMENT.BaseINCREMENT(clusters, Instance.distance)
+    for i,line in enumerate(conf):
+        print "%d:\t%s" % (i, str(line))
+    
+    increment = INCREMENT.OpticsINCREMENT(clusters, Instance.distance)
 
     increment.subcluster()
     increment.selectRepresenatives()
@@ -81,7 +120,10 @@ def main(args):
     
     
     print "Final Error: %d of %d: %f" % (checkAccuracy(increment.final))
+    conf = confusion(increment.final)
     
+    for i,line in enumerate(conf):
+        print "%d:\t%s" % (i, str(line))
 
 if __name__ == "__main__":
     main(sys.argv)

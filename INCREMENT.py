@@ -1,4 +1,7 @@
+
 import utils
+import optics
+
 
 #class Cluster:
     
@@ -13,11 +16,11 @@ class BaseINCREMENT(object):
     def __init__(self, clustering, distance=utils.EuclideanDistance):
         self.clustering = clustering
         self.subclusters = []
-        self.representatives = []
+        self.representatives = [] #Index into subclusters
 
-        self.final = []
+        self.final = [] #store final clustering 
 
-        self.distance = distance
+        self.distance = distance #function to determine distance between instances can be set for custom domains
         
 
     def setInstanceDistance(func):
@@ -37,8 +40,28 @@ class BaseINCREMENT(object):
 
 class OpticsINCREMENT(BaseINCREMENT):
 
+    
     def subcluster(self):
-        pass
+        
+        self.subclusters = []
+        
+        minPts = 10
+        
+        distances = map(lambda x:utils.pairwise(x,self.distance,True), self.clustering) #N^2 where N is the number of instances per cluster -- SLOW
+        #print distances
+        
+        output = map(lambda d: optics.OPTICS(d, minPts), distances)
+        separated = map(lambda o: optics.separateClusters(o, minPts), output)
+        
+        for c,sep in enumerate(separated):
+            ids = map(lambda sc: map(lambda x: x._id, sc), sep)
+            for sub in ids:
+                clust = []
+                for i in sub:
+                    clust.append(self.clustering[c][i])
+                
+                self.subclusters.append(clust)
+        
 
 class MatchingINCREMENT(BaseINCREMENT):
 
