@@ -222,7 +222,7 @@ def main(args):
     print "Initial:"
     printMetrics(clusters)
 
-    increment = INCREMENT.OpticsINCREMENT(clusters, distance=Instance.distance)
+    increment = INCREMENT.INCREMENT(clusters, distance=Instance.distance)
 
     increment.run(minPts=10)
     

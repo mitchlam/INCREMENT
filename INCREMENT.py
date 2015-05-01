@@ -46,7 +46,7 @@ class BaseINCREMENT(object):
 
 class OpticsINCREMENT(BaseINCREMENT):
 
-    
+    #Performs OPTICS to subcluster the current clustering
     def subcluster(self, minPts=5, **kwargs):
         
         self.subclusters = []
@@ -69,7 +69,42 @@ class OpticsINCREMENT(BaseINCREMENT):
 
 class MatchingINCREMENT(BaseINCREMENT):
 
-    def queryUser(self):
+    #Organizes and manages the presentation of representatives and user feedback
+    def queryUser(self, **kwargs):
         pass
+
+    #Actually presents a set of points to the user, and returns the feedback
+    def query(self, **kwargs):
+        raise("Not Implemented")
+
+class OracleMatchingINCREMENT(MatchingINCREMENT):
+    
+    #Cheats and looks at label. Simulates a perfect user.
+    def query(self, labels = None, **kwargs):
+        pass
+
+
+
+
+class INCREMENT(OpticsINCREMENT, OracleMatchingINCREMENT):
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
