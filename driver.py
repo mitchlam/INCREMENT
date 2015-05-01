@@ -176,46 +176,61 @@ def cluster_kmeans(X, Y, K=3):
     kmeans.fit(X)
     labels = kmeans.labels_
 
-    measures = metrics.homogeneity_completeness_v_measure(Y, labels)    
+    #measures = metrics.homogeneity_completeness_v_measure(Y, labels)    
 
     for x,y,t in zip(X,labels,Y):
         #print "Predicted: %d Actual: %d: Instance: %s" %(y,t,str(x))
         clusters[y].append(Instance(x,t))
         
-    print "KMeans: H: %f, C: %f, V: %f" %(measures)
+    #print "KMeans: H: %f, C: %f, V: %f" %(measures)
     return clusters
+
+def printMetrics(cluster):
+    cont = contingency(cluster)
+    
+    print "Error: %d of %d: %f" % (checkAccuracy(cont))
+    print "H: %f C: %f V: %f" % (All_measures(cont))
+    
+    utils.print_cont(cont)
+
+    print
+
+def getIris():
+    iris = datasets.load_iris()
+    
+    print "Iris: %d" %(len(iris.data))
+    return iris.data, iris.target
+
+def getDigit():
+    digits = datasets.load_digits()
+    
+    print "Digits: %d" % (len(digits['data']))
+    
+    return digits['data'], digits['target']
+
+def getData():
+    return getDigit()
 
 def main(args):
 
-    iris = datasets.load_iris()
+    X,Y = getData()
 
-    X = iris.data
-    Y = iris.target
-
-    print "Iris: %d" %(len(X))
     
-    clusters = cluster_kmeans(X,Y,K=3)
-
-    cont = contingency(clusters)
-    print "Initial Error: %d of %d: %f" % (checkAccuracy(cont))
-    print "H: %f C: %f V: %f" % (All_measures(cont))
-
-    for i,line in enumerate(cont):
-        print "%d:\t%s" % (i, str(line))
     
-    increment = INCREMENT.OpticsINCREMENT(clusters, Instance.distance)
+    clusters = cluster_kmeans(X,Y,K=5)
 
-    increment.subcluster()
-    increment.selectRepresenatives()
-    increment.queryUser()
-    increment.mergeSubclusters()
+    print "Initial:"
+    printMetrics(clusters)
+
+    increment = INCREMENT.OpticsINCREMENT(clusters, distance=Instance.distance)
+
+    increment.run(minPts=10)
     
-    cont = contingency(increment.final)
-    print "Final Error: %d of %d: %f" % (checkAccuracy(cont))
-    print "H: %f C: %f V: %f" % (All_measures(cont))
     
-    for i,line in enumerate(cont):
-        print "%d:\t%s" % (i, str(line))
+    print "Final:"
+    printMetrics(increment.final)
+    
+    
 
 if __name__ == "__main__":
     main(sys.argv)

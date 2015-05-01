@@ -286,7 +286,8 @@ def separateClusters(output, minPts, display=False):
                 i += 1
         fig.show()
     
-    print "clusters:", len(clusters), map(lambda x: len(x), clusters)
+    print "Sub-Clusters:", len(clusters), map(lambda x: len(x), clusters)
+    
     
     #print "variance:", np.var(reach),",", np.var(forward)
     
