@@ -67,19 +67,18 @@ def main(args):
 
     X,Y = getData()
     
-    clusters = cluster_kmeans(X,Y,K=20)
+    clusters = cluster_kmeans(X,Y,K=10)
 
     print "Initial:"
     validation.printMetrics(clusters)
 
     increment = INCREMENT.INCREMENT(clusters, distance=Instance.distance)
 
-    increment.run(minPts=10, query_size=9, labeler = lambda p: p.label)
+    increment.run(minPts=2, query_size=9, labeler = lambda p: p.label)
     
     
     print "Final:"
     validation.printMetrics(increment.final)
-    
     
 
 if __name__ == "__main__":

@@ -67,14 +67,19 @@ class OpticsSubclustering(BaseINCREMENT):
         output = map(lambda d: optics.OPTICS(d, minPts), distances)
         separated = map(lambda o: optics.separateClusters(o, minPts), output)
         
+        print "Sub-Clustering:"
+        
         for c,sep in enumerate(separated):
             ids = map(lambda sc: map(lambda x: x._id, sc), sep)
+            lengths = []
             for sub in ids:
                 clust = []
                 for i in sub:
                     clust.append(self.clustering[c][i])
+                lengths.append(len(clust))
                 
                 self.subclusters.append(clust)
+            print "\t%d: %d => %s" %(c, len(lengths), lengths)
         
         print "Subclusters Formed:", len(self.subclusters)
         print 
@@ -148,6 +153,7 @@ class ClosestPointFeedback(BaseINCREMENT):
         print "Feedback:", len(feedback)
         for f in feedback:
             print "\t", f
+        print
 
 ################################# Query #################################################
 
@@ -183,8 +189,12 @@ class OracleMatching(BaseINCREMENT):
        
         feedback = []
         
+        #print "Query:"
         for label, points in clusters.items():
+            #print "\tLabel [%s]: %s" % (str(label), str(points))
             feedback.append(points)
+        
+        #print "\tUnknown:", unknown
         
         for point in unknown:
             feedback.append([point])

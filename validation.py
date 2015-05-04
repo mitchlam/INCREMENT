@@ -27,7 +27,7 @@ def contingency(clustering):
 
 #computes and returns the homogeneity
 def homogeneity(cont,eps=10e-10):
-    if(len(cont[0]) == 1):
+    if(len(cont) == 1):
         return 1.0
     
     x = 0.0
@@ -143,7 +143,7 @@ def checkAccuracy(cont):
 
     error = total-correct
     #print "Final Error : %d of %d" % (error, total)
-    return (error, total, error/total)
+    return (error, total, correct/total * 100)
 
 
 
@@ -151,7 +151,7 @@ def checkAccuracy(cont):
 def printMetrics(cluster):
     cont = contingency(cluster)
     
-    print "Error: %d of %d: %f" % (checkAccuracy(cont))
+    print "Accuracy: %d of %d: %.3f %%" % (checkAccuracy(cont))
     print "H: %f C: %f V: %f" % (All_measures(cont))
     
     utils.print_cont(cont)

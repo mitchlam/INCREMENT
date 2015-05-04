@@ -192,7 +192,7 @@ def separateClusters(output, minPts, display=False):
     reachability = np.array(map(lambda x: x.reachability, output))
     
     if len(output) < minPts:
-        print "Sub-clusters: 1 [%d]" %(len(output))
+        #print "Sub-clusters: 1 [%d]" %(len(output))
         return [output]
     
     fEdge = np.array((0, 1, -1))
@@ -291,7 +291,7 @@ def separateClusters(output, minPts, display=False):
                 i += 1
         fig.show()
     
-    print "Sub-Clusters:", len(clusters), map(lambda x: len(x), clusters)
+    #print "Sub-Clusters:", len(clusters), map(lambda x: len(x), clusters)
     
     
     #print "variance:", np.var(reach),",", np.var(forward)
