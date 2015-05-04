@@ -61,13 +61,13 @@ def getDigit():
     return digits['data'], digits['target']
 
 def getData():
-    return getDigit()
+    return getIris()
 
 def main(args):
 
     X,Y = getData()
     
-    clusters = cluster_kmeans(X,Y,K=10)
+    clusters = cluster_kmeans(X,Y,K=20)
 
     print "Initial:"
     validation.printMetrics(clusters)

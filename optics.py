@@ -190,6 +190,11 @@ def selectMinimum(output, minPts):
 def separateClusters(output, minPts, display=False):
     output[0].reachability = 0
     reachability = np.array(map(lambda x: x.reachability, output))
+    
+    if len(output) < minPts:
+        print "Sub-clusters: 1 [%d]" %(len(output))
+        return [output]
+    
     fEdge = np.array((0, 1, -1))
     avg = np.array([1/float(minPts)] * minPts)
 
@@ -249,7 +254,7 @@ def separateClusters(output, minPts, display=False):
     if display:
         fig.show()
 
-    while(len(clusters[0]) < minPts and len(clusters) > 1):
+    while(len(clusters) > 1 and len(clusters[0]) < minPts):
         if (len(clusters[0]) < minPts and len(clusters) > 1):
             clusters[1] = clusters[0] + clusters[1]
             del clusters[0]
