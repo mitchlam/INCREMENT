@@ -21,6 +21,10 @@ def mode(x):
     
     return pairs[0][0]
 
+def arg_min(x):
+    m = min(x)
+    return x.index(m)
+
 def pairwise(args, func, symmetric=True):
 	mat = []
 	for x, arg1 in enumerate(args):

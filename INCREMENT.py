@@ -30,7 +30,7 @@ class BaseINCREMENT(object):
     def subcluster(self, **kwargs):
         self.subclusters = self.clustering
 
-    def selectRepresenatives(self, **kwargs):
+    def selectRepresentatives(self, **kwargs):
         self.representatives = map(lambda x: x[0],self.subclusters)
 
     def generateFeedback(self, **kwargs):
@@ -45,11 +45,15 @@ class BaseINCREMENT(object):
         self.final = self.subclusters
 
     def run(self, **kwargs):
+        print "Running INCREMENT"
+        print
+        
         self.subcluster(**kwargs)
-        self.selectRepresenatives(**kwargs)
+        self.selectRepresentatives(**kwargs)
         self.generateFeedback(**kwargs)
         self.mergeSubclusters(**kwargs)
 
+################################# Sub-Clustering ##########################################################
 class OpticsSubclustering(BaseINCREMENT):
 
     #Performs OPTICS to subcluster the current clustering
@@ -71,7 +75,32 @@ class OpticsSubclustering(BaseINCREMENT):
                     clust.append(self.clustering[c][i])
                 
                 self.subclusters.append(clust)
+        
+        print "Subclusters Formed:", len(self.subclusters)
+        print 
+        
+
+################################# Representative Selection #################################################
+class MedoidSelector(BaseINCREMENT):
+    
+    def selectRepresentatives(self, **kwargs):
+        self.representatives = []
+        
+        distances = map(lambda sc: utils.pairwise(sc, self.distance, self.symmetric_distance), self.subclusters)
+        
+        reps = []
+        
+        for i, dist in enumerate(distances):
+            sums = map(sum, dist)
+            m = utils.arg_min(sums)
+            reps.append(m)
+            self.representatives.append(self.subclusters[i][m])
+        
+        print "Representatives:"
+        print reps
         print
+        
+################################# Query Ordering #################################################
 
 class ClosestPointFeedback(BaseINCREMENT):
     
@@ -116,21 +145,99 @@ class ClosestPointFeedback(BaseINCREMENT):
     
         self.feedback = feedback
         
-        print "Feedback: "
+        print "Feedback:", len(feedback)
         for f in feedback:
             print "\t", f
 
+################################# Query #################################################
 
-class OracleMatchingINCREMENT(ClosestPointFeedback):
+class OracleMatching(BaseINCREMENT):
     
-    #Cheats and looks at label. Simulates a perfect user.
-    def query(self, labels = None, **kwargs):
-        pass
+    #Cheats and looks at target. Simulates a perfect user.
+    #labeler is a function that accepts an instance and returns its label
+    def query(self, pts,  labeler=None, **kwargs):
+        
+        #if no labeling function is provided, default to parent implementation
+        if labeler == None:
+            return super(OracleMatching, self).query(pts, **kwargs)
+        
+        #dictionary from label to point index
+        clusters = {}
+        
+        #list for unknown points
+        unknown = []
+        
+        for i,p in enumerate(pts):
+            label = labeler(p)
+            
+            if label == None:
+                unknown.append(i)
+                continue
+            
+            if label in clusters:
+                clusters[label].append(i)
+            else:
+                clusters[label] = [i]
+       
+        #Separate from dictionary
+       
+        feedback = []
+        
+        for label, points in clusters.items():
+            feedback.append(points)
+        
+        for point in unknown:
+            feedback.append([point])
+        
+        return feedback
+    
+################################# Merging #################################################
+
+class MergeSubclusters(BaseINCREMENT):
+    
+    def mergeSubclusters(self, **kwargs):
+        self.final = []
+        feedback = []
+        
+        for f in self.feedback:
+            feedback += f
+        
+        
+        #print "flattened Feedback:"
+        #print "\t", feedback
+        
+        sets = map(set, feedback)
+        
+        changed = True
+        while changed:
+            changed = False
+            for i,x in enumerate(sets):
+                for j,y in enumerate(sets):
+                    if i >= j:  
+                        continue
+                    
+                    if(not x.isdisjoint(y)):
+                        x.update(y)
+                        del sets[j] #double check this. If j doesnt get updated correctly, will cause problem
+                        changed = True
+        
+        feedback = []
+        for s in sets:
+            cluster = []
+            f = []
+            for i in s:
+                f.append(i)
+                cluster += self.subclusters[i]
+            self.final.append(cluster)
+            feedback.append(f)
+        
+        print "Merged Feedback:"
+        print "\t", feedback
+        print 
 
 
-
-
-class INCREMENT(OpticsSubclustering, ClosestPointFeedback):
+        
+class INCREMENT(OpticsSubclustering, MedoidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
 
 
