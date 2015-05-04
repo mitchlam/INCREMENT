@@ -61,6 +61,7 @@ def print_cont(mat, clusters_per_mat=20):
     
     print
     print "Rows are labels, Columns are Clusters"
+    print
     for x, m in enumerate(mats):
         insert_indices(m, col_start = clusters_per_mat*x)
         print_mat(m)

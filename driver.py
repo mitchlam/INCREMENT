@@ -61,7 +61,7 @@ def getDigit():
     return digits['data'], digits['target']
 
 def getData():
-    return getDigit()
+    return getIris()
 
 def main(args):
 
@@ -74,7 +74,7 @@ def main(args):
 
     increment = INCREMENT.INCREMENT(clusters, distance=Instance.distance)
 
-    increment.run(minPts=10)
+    increment.run(minPts=4, query_size=2)
     
     
     print "Final:"
