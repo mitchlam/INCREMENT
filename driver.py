@@ -8,6 +8,7 @@ import validation
 import INCREMENT
 
 from sklearn.cluster import KMeans
+from sklearn.cluster import DBSCAN
 from sklearn import datasets
 from sklearn import metrics
 from scipy.spatial import distance as Distance
@@ -45,7 +46,27 @@ def cluster_kmeans(X, Y, K=3):
     #print "KMeans: H: %f, C: %f, V: %f" %(measures)
     return clusters
 
+def cluster_dbscan(X, Y, e=0.3, minPts=5):
+    dbscan = DBSCAN(eps=e, min_samples = minPts)
 
+    dbscan.fit(X)
+    labels = dbscan.labels_
+
+    K = len(set(labels))
+
+    clusters = []
+    
+    for i in range(K):
+        clusters.append([])
+
+    #measures = metrics.homogeneity_completeness_v_measure(Y, labels)    
+
+    for x,y,t in zip(X,labels,Y):
+        #print "Predicted: %d Actual: %d: Instance: %s" %(y,t,str(x))
+        clusters[int(y)].append(Instance(x,t))
+        
+    #print "KMeans: H: %f, C: %f, V: %f" %(measures)
+    return clusters
 
 def getIris():
     iris = datasets.load_iris()
@@ -61,14 +82,15 @@ def getDigit():
     return digits['data'], digits['target']
 
 def getData():
-    return getIris()
+    return getDigit()
 
 def main(args):
 
     X,Y = getData()
     
-    clusters = cluster_kmeans(X,Y,K=10)
-
+    #clusters = cluster_kmeans(X,Y,K=10)
+    clusters = cluster_dbscan(X,Y, e=0.5, minPts=5 )
+    
     print "Initial:"
     validation.printMetrics(clusters)
 

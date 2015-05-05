@@ -61,9 +61,11 @@ class OpticsSubclustering(BaseINCREMENT):
         
         self.subclusters = []
         
+        print "Computing Distance"
         distances = map(lambda x:utils.pairwise(x,self.distance, self.symmetric_distance), self.clustering) #N^2 where N is the number of instances per cluster -- SLOW
         #print distances
         
+        print "Running OPTICS"
         output = map(lambda d: optics.OPTICS(d, minPts), distances)
         separated = map(lambda o: optics.separateClusters(o, minPts), output)
         
@@ -110,7 +112,7 @@ class MedoidSelector(BaseINCREMENT):
 class ClosestPointFeedback(BaseINCREMENT):
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, query_size=9, **kwargs):
+    def generateFeedback(self, query_size=9, times_presented=1, **kwargs):
         
         #include index to retrieve the actual point after sorting
         rep_distances = map(lambda d: zip(d, range(len(d))) ,utils.pairwise(self.representatives, self.distance, self.symmetric_distance) )
@@ -118,7 +120,11 @@ class ClosestPointFeedback(BaseINCREMENT):
         queue = range(len(self.representatives))
         
         #list of indexes that have been queried
-        queried = []
+        queried = {}
+        
+        #initialize queried
+        for i in queue:
+            queried[i] = 0
         
         feedback = []
         
@@ -127,7 +133,7 @@ class ClosestPointFeedback(BaseINCREMENT):
             del queue[0]
             
             #skip points already queried
-            if i in queried:
+            if queried[i] >= times_presented:
                 continue
             
             dist = sorted(rep_distances[i][:])
@@ -145,8 +151,7 @@ class ClosestPointFeedback(BaseINCREMENT):
             
             #add pts to index to avoid querying again
             for idx in pt_idx:
-                if( idx not in queried):
-                    queried.append(idx)
+                queried[idx] += 1
     
         self.feedback = feedback
         

@@ -141,9 +141,8 @@ def checkAccuracy(cont):
             if i == idx[j]:
                 correct += v
 
-    error = total-correct
     #print "Final Error : %d of %d" % (error, total)
-    return (error, total, correct/total * 100)
+    return (correct, total, correct/total * 100)
 
 
 
