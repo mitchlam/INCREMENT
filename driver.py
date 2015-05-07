@@ -81,23 +81,49 @@ def getDigit():
     
     return digits['data'], digits['target']
 
+def loadCSV(filename):
+    
+    f = open(filename, "r")
+
+    labels = []
+    data = []
+    targets = []
+    
+    header = f.readline()
+    
+    for line in f:
+        l = [i.strip() for i in line.split(",")]
+        data.append(map(lambda x: float(x), l[:-1]))
+        lbl = l[-1]
+        
+        if lbl not in labels:
+            labels.append(lbl)
+            
+        targets.append(labels.index(lbl))
+
+    f.close()
+    
+    
+    
+    return np.array(data),np.array(targets)
+
 def getData():
-    return getDigit()
+    #return getIris()
+    return loadCSV("COIL.csv")
 
 def main(args):
 
     X,Y = getData()
-    
-    #clusters = cluster_kmeans(X,Y,K=10)
-    clusters = cluster_dbscan(X,Y, e=0.5, minPts=5 )
+    #print X[:5]
+    clusters = cluster_kmeans(X,Y,K=20)
+    #clusters = cluster_dbscan(X,Y, e=0.5, minPts=5 )
     
     print "Initial:"
     validation.printMetrics(clusters)
 
     increment = INCREMENT.INCREMENT(clusters, distance=Instance.distance)
 
-    increment.run(minPts=2, query_size=9, labeler = lambda p: p.label)
-    
+    increment.run(minPts=5, query_size=9, times_presented=2 ,labeler = lambda p: p.label)
     
     print "Final:"
     validation.printMetrics(increment.final)
