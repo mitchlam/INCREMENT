@@ -203,6 +203,22 @@ class ClosestPointFeedback(AssignmentFeedback):
         print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         print
 
+
+class MinimumSpanningTreeFeedback(AssignmentFeedback):
+    
+    #Organizes and manages the presentation of representatives and user feedback
+    def generateFeedback(self, query_size=9, times_presented=1, **kwargs):
+        
+        if(query_size == 1):
+            super(ClosestPointFeedback, self).generateFeedback(**kwargs)
+            return
+        
+        rep_distances = map(lambda d: zip(d, range(len(d))) ,utils.pairwise(self.representatives, self.distance, self.symmetric_distance) )
+        
+        #TODO
+        #Create MST.
+        #Recalculate distance for each point based on path lengths in MST
+        #perform queries as in ClosestPointFeedback -- perhaps separate out parts from above and inherit from it.
 ################################# Query #################################################
 
 #If only a single point is presented, return it's label 
