@@ -123,12 +123,17 @@ def main(args):
     clusters = cluster_kmeans(X,Y,K=20)
     #clusters = cluster_dbscan(X,Y, e=0.5, minPts=5 )
     
+    instances = []
+    
+    for x,y in zip(X,Y):
+        instances.append(Instance(x, y))
+    
     print "Initial:"
     validation.printMetrics(clusters)
 
     increment = INCREMENT.INCREMENT(clusters, distance=Instance.distance)
 
-    increment.run(minPts=5, query_size=9, times_presented=2 ,labeler = lambda p: p.label)
+    increment.run(minPts=args.minPts, query_size=args.query_size, times_presented=1 ,labeler = lambda p: p.label)
     
     print "Final:"
     validation.printMetrics(increment.final)
@@ -156,8 +161,11 @@ def main(args):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Driver to run INCREMENT.")
-    parser.add_argument("dataset", help="The dataset to use for input to clustering")
-    parser.add_argument( "-o", "--out", metavar="Output", help="The file in which to store INCREMENT's final clustering", dest="output")
+    parser.add_argument("dataset", help="The dataset to use for input to clustering.")
+    parser.add_argument( "-o", "--out", metavar="Output", help="The file in which to store INCREMENT's final clustering.", dest="output")
+    parser.add_argument( "-m", "--minPts", help="The minPts parameter to pass to OPTICS.", type=int, default=5)
+    parser.add_argument( "-q", "--query-size", help="The number of points to present to the user per query.", type=int, default=9)
+    
     
     args = parser.parse_args()
     main(args)
