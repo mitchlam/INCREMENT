@@ -5,6 +5,8 @@ import numpy as np
 import utils
 import validation
 
+import argparse
+
 import INCREMENT
 
 from sklearn.cluster import KMeans
@@ -70,14 +72,10 @@ def cluster_dbscan(X, Y, e=0.3, minPts=5):
 
 def getIris():
     iris = datasets.load_iris()
-    
-    print "Iris: %d" %(len(iris.data))
     return iris.data, iris.target
 
 def getDigit():
     digits = datasets.load_digits()
-    
-    print "Digits: %d" % (len(digits['data']))
     
     return digits['data'], digits['target']
 
@@ -99,7 +97,7 @@ def loadCSV(filename):
         if lbl not in labels:
             labels.append(lbl)
             
-        targets.append(labels.index(lbl))
+        targets.append(lbl)
 
     f.close()
     
@@ -107,14 +105,21 @@ def loadCSV(filename):
     
     return np.array(data),np.array(targets)
 
-def getData():
-    #return getIris()
-    return loadCSV("COIL.csv")
+def getData(f):
+    if( f == "iris"):
+        return getIris()
+    
+    if (f == "digit"):
+        return getDigit()
+    
+    
+    return loadCSV(f)
 
 def main(args):
-
-    X,Y = getData()
-    #print X[:5]
+    X,Y = getData(args.dataset)
+    
+    print "Using: %s (%d)" % (args.dataset, len(X))
+    
     clusters = cluster_kmeans(X,Y,K=20)
     #clusters = cluster_dbscan(X,Y, e=0.5, minPts=5 )
     
@@ -128,9 +133,34 @@ def main(args):
     print "Final:"
     validation.printMetrics(increment.final)
     
+    
+    #write data and cluster to file
+    #try:
+    if (args.output != None):    
+        filename = args.output
+        
+        f = open(filename,"w")
+        
+        print "Writing Clustering to", filename
+        for c,cluster in enumerate(increment.final):
+            for instance in cluster:
+                s = ""
+                for i in instance.data:
+                    s += "%s, " % (str(i))
+                
+                f.write("%s%s, %s\n" % (s, str(c), str(instance.label)))
+        f.close()
+    #except:
+    pass
 
 if __name__ == "__main__":
-    main(sys.argv)
+    
+    parser = argparse.ArgumentParser(description="Driver to run INCREMENT.")
+    parser.add_argument("dataset", help="The dataset to use for input to clustering")
+    parser.add_argument( "-o", "--out", metavar="Output", help="The file in which to store INCREMENT's final clustering", dest="output")
+    
+    args = parser.parse_args()
+    main(args)
 
 
 
