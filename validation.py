@@ -148,14 +148,15 @@ def checkAccuracy(cont):
 
 
 def printMetrics(cluster):
-    cont = contingency(cluster)
-    
-    print "Accuracy: %d of %d: %.3f %%" % (checkAccuracy(cont))
-    print "H: %f C: %f V: %f" % (All_measures(cont))
-    
-    utils.print_cont(cont)
-
-    print
+	
+	#clustering = sorted(cluster, key=lambda x: len(x), reverse=True)
+	cont = contingency(cluster)
+	
+	print "Accuracy: %d of %d: %.3f %%" % (checkAccuracy(cont))
+	print "H: %f C: %f V: %f" % (All_measures(cont))
+	utils.print_cont(cont)
+	
+	print
 	
 	
 	

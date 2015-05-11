@@ -1,6 +1,7 @@
 
 import utils
 import optics
+import scipy.sparse.csgraph as csgraph
 
 
 #class Cluster:
@@ -60,7 +61,7 @@ class BaseINCREMENT(object):
 class OpticsSubclustering(BaseINCREMENT):
 
     #Performs OPTICS to subcluster the current clustering
-    def subcluster(self, minPts=5, **kwargs):
+    def subcluster(self, minPts=5, display=False, **kwargs):
         
         self.subclusters = []
         
@@ -70,7 +71,7 @@ class OpticsSubclustering(BaseINCREMENT):
         
         print "Running OPTICS: minPts = %d" % (minPts)
         output = map(lambda d: optics.OPTICS(d, minPts), distances)
-        separated = map(lambda o: optics.separateClusters(o, minPts), output)
+        separated = map(lambda o: optics.separateClusters(o, minPts, display=display), output)
         
         print "Sub-Clustering:"
         
@@ -147,18 +148,18 @@ class AssignmentFeedback(BaseINCREMENT):
         print "Number of Assignement Queries: %d" % (self.num_queries)
         print
    
+class MatchingFeedback(AssignmentFeedback):
     
-class ClosestPointFeedback(AssignmentFeedback):
-    
-    #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, query_size=9, times_presented=1, **kwargs):
+    #Distances should be the pairwise distances between the representatives
+    def generateFeedback(self, distances, query_size=9, times_presented=1, **kwargs):
         
+        #can only perform matching if query_size > 1
         if(query_size == 1):
-            super(ClosestPointFeedback, self).generateFeedback(**kwargs)
+            super(MatchingFeedback, self).generateFeedback(**kwargs)
             return
         
-        #include index to retrieve the actual point after sorting
-        rep_distances = map(lambda d: zip(d, range(len(d))) ,utils.pairwise(self.representatives, self.distance, self.symmetric_distance) )
+         #include index to retrieve the actual point after sorting
+        rep_distances = map(lambda d: zip(d, range(len(d))) , distances )
         
         queue = range(len(self.representatives))
         
@@ -202,23 +203,41 @@ class ClosestPointFeedback(AssignmentFeedback):
         print 
         print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         print
-
-
-class MinimumSpanningTreeFeedback(AssignmentFeedback):
+        
+class ClosestPointFeedback(MatchingFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, query_size=9, times_presented=1, **kwargs):
+    def generateFeedback(self, **kwargs):    
+        distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
         
-        if(query_size == 1):
-            super(ClosestPointFeedback, self).generateFeedback(**kwargs)
-            return
+        super(ClosestPointFeedback,self).generateFeedback(distances, **kwargs)
+       
+    #distances should be the pairwise distances between the reps
+    
+
+
+class MinimumSpanningTreeFeedback(MatchingFeedback):
+    
+    #Organizes and manages the presentation of representatives and user feedback
+    def generateFeedback(self, **kwargs):
+        distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
         
-        rep_distances = map(lambda d: zip(d, range(len(d))) ,utils.pairwise(self.representatives, self.distance, self.symmetric_distance) )
+        mst = csgraph.minimum_spanning_tree(distances)
+        distances = csgraph.shortest_path(mst,method="D", directed=False)
         
-        #TODO
-        #Create MST.
-        #Recalculate distance for each point based on path lengths in MST
-        #perform queries as in ClosestPointFeedback -- perhaps separate out parts from above and inherit from it.
+        super(MinimumSpanningTreeFeedback, self). generateFeedback(distances, **kwargs)
+        
+
+class MinimumDistanceFeedback(MatchingFeedback):
+    
+    #Organizes and manages the presentation of representatives and user feedback
+    def generateFeedback(self, **kwargs):
+        distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
+
+        distances = csgraph.shortest_path(distances,method="D", directed=self.symmetric_distance)
+        
+        super(MinimumDistanceFeedback, self). generateFeedback(distances, **kwargs)
+        
 ################################# Query #################################################
 
 #If only a single point is presented, return it's label 
@@ -318,9 +337,13 @@ class MergeSubclusters(BaseINCREMENT):
 
 
         
-class INCREMENT(OpticsSubclustering, MedoidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
+class ClosestINCREMENT(OpticsSubclustering, MedoidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
 
+class TreeINCREMENT(OpticsSubclustering, MedoidSelector, MinimumSpanningTreeFeedback, OracleMatching, MergeSubclusters):
+    pass
+class PathINCREMENT(OpticsSubclustering, MedoidSelector, MinimumDistanceFeedback, OracleMatching, MergeSubclusters):
+    pass
 
 
 
