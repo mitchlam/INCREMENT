@@ -55,47 +55,6 @@ def cluster_data(X,Y, method="kmeans", K=5, **kwargs):
     
     return clusters
     
-def cluster_kmeans(X, Y, K=3):
-    clusters = []
-    
-    for i in range(K):
-        clusters.append([])
-
-    kmeans = KMeans(n_clusters=K)
-
-    kmeans.fit(X)
-    labels = kmeans.labels_
-
-    #measures = metrics.homogeneity_completeness_v_measure(Y, labels)    
-
-    for x,y,t in zip(X,labels,Y):
-        #print "Predicted: %d Actual: %d: Instance: %s" %(y,t,str(x))
-        clusters[y].append(Instance(x,t))
-        
-    #print "KMeans: H: %f, C: %f, V: %f" %(measures)
-    return clusters
-
-def cluster_dbscan(X, Y, e=0.3, minPts=5):
-    dbscan = DBSCAN(eps=e, min_samples = minPts)
-
-    dbscan.fit(X)
-    labels = dbscan.labels_
-
-    K = len(set(labels))
-
-    clusters = []
-    
-    for i in range(K):
-        clusters.append([])
-
-    #measures = metrics.homogeneity_completeness_v_measure(Y, labels)    
-
-    for x,y,t in zip(X,labels,Y):
-        #print "Predicted: %d Actual: %d: Instance: %s" %(y,t,str(x))
-        clusters[int(y)].append(Instance(x,t))
-        
-    #print "KMeans: H: %f, C: %f, V: %f" %(measures)
-    return clusters
 
 def getIris():
     iris = datasets.load_iris()
