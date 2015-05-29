@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import utils
 import validation
+import time
 
 import argparse
 
@@ -114,16 +115,29 @@ def loadCSV(filename):
     targets = []
     
     header = f.readline()
-    
+    num = 1
+
     for line in f:
         l = [i.strip() for i in line.split(",")]
-        data.append(map(lambda x: float(x), l[:-1]))
+
+        try:
+            data.append(map(lambda x: float(x), l[:-1]))
+        except ValueError as e:
+            print e
+            print l
+            print "Line: %d" % (num)
+            sys.exit()
+        except:
+            pass
+
         lbl = l[-1]
         
         if lbl not in labels:
             labels.append(lbl)
             
         targets.append(lbl)
+        
+        num += 1
 
     f.close()
     
@@ -142,9 +156,14 @@ def getData(f):
     return loadCSV(f)
 
 def main(args):
+
+    starttime = time.clock()
+    lasttime = starttime
+    
     X,Y = getData(args.dataset)
     
-    print "Using: %s (%d)" % (args.dataset, len(X))
+    print "Using: %s (%d)  --  (%f s)" % (args.dataset, len(X), time.clock() - lasttime)
+    lasttime = time.clock()
     
     clusters = []
     
@@ -158,7 +177,9 @@ def main(args):
         clusters = cluster_data(X,Y, args)
         
 
-    print "Initial:"
+    print "Initial:  --  (%f s)" % (time.clock() - lasttime)
+    lasttime  = time.clock()
+
     validation.printMetrics(clusters)
 
     increment = INCREMENT.ClosestINCREMENT(clusters, distance=Instance.distance)
@@ -166,7 +187,9 @@ def main(args):
     
 
     
-    print "INCREMENT: (%d)" % (increment.num_queries)
+    print "INCREMENT: (%d)  --  (%f s)" % (increment.num_queries, time.clock() - lasttime)
+    lasttime = time.clock()
+
     validation.printMetrics(increment.final)
     
     
@@ -188,6 +211,8 @@ def main(args):
         f.close()
     #except:
     pass
+
+    print "Total Time: %f s" %(time.clock() - starttime)
 
 if __name__ == "__main__":
     
