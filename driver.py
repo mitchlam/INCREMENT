@@ -171,6 +171,34 @@ def getData(f):
     
     return loadCSV(f)
 
+def formatTime(t):
+
+    def separate(t,s):
+        period = 0
+        if (int(t) / s > 0):
+            period = int(t) / s
+            while (t-s >= 0):
+                t -= s
+        return (t, period)
+
+    t, days = separate(t, 3600*24)
+    t, hours = separate(t,3600)
+    seconds, minutes = separate(t, 60)
+
+    result = ""
+    
+    if days > 0:
+        result += "%d d " % (days)
+    if hours > 0:
+        result += "%d h " % (hours)
+    if minutes > 0:
+        result += "%d m " % (minutes)
+
+    result += "%f s" %(seconds)
+
+    return result
+    
+
 def main(args):
 
     starttime = time.clock()
@@ -178,7 +206,7 @@ def main(args):
     
     X,Y = getData(args.dataset)
     
-    print "Using: %s (%d)  --  (%f s)" % (args.dataset, len(X), time.clock() - lasttime)
+    print "Using: %s (%d)  --  (%s)" % (args.dataset, len(X), formatTime(time.clock() - lasttime))
     lasttime = time.clock()
     
     clusters = []
@@ -193,7 +221,7 @@ def main(args):
         clusters = cluster_data(X,Y, args)
         
 
-    print "Initial:  --  (%f s)" % (time.clock() - lasttime)
+    print "Initial:  --  (%s)" % (formatTime(time.clock() - lasttime))
     lasttime  = time.clock()
 
     validation.printMetrics(clusters)
@@ -203,7 +231,7 @@ def main(args):
     
 
     
-    print "INCREMENT: (%d)  --  (%f s)" % (increment.num_queries, time.clock() - lasttime)
+    print "INCREMENT: (%d)  --  (%s)" % (increment.num_queries, formatTime(time.clock() - lasttime))
     lasttime = time.clock()
 
     validation.printMetrics(increment.final)
@@ -228,7 +256,7 @@ def main(args):
     #except:
     pass
 
-    print "Total Time: %f s" %(time.clock() - starttime)
+    print "Total Time: %s" %(formatTime(time.clock() - starttime))
 
 if __name__ == "__main__":
     

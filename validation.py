@@ -1,6 +1,6 @@
 import utils
 import numpy as np
-
+import sklearn.metrics
 
 def contingency(clustering):
     labels = [-1]*len(clustering)
@@ -146,6 +146,32 @@ def checkAccuracy(cont):
 
 
 
+def jaccard(clustering):
+    true = map(lambda c: map(lambda x: x.label, c), clustering)
+    true = [x for y in true for x in y]
+
+    pred = []
+    for i,y in enumerate(clustering):
+        pred += [i]*len(y)
+
+
+    ss = 0
+    sd = 0
+    ds = 0
+
+    for i in range(len(true)):
+        for j in range(i+1,len(true)):
+            one = true[i] == true[j]
+            two = pred[i] == pred[j]
+            if (one and two):
+                ss += 1
+            elif (one):
+                sd += 1
+            elif (two):
+                ds += 1
+
+    return float(ss) / float(ss + sd + ds)
+
 
 def printMetrics(cluster):
 	
@@ -153,7 +179,8 @@ def printMetrics(cluster):
 	cont = contingency(cluster)
 	
 	print "Accuracy: %d of %d: %.3f %%" % (checkAccuracy(cont))
-	print "H: %f C: %f V: %f" % (All_measures(cont))
+        print "H: %f C: %f V: %f" % (All_measures(cont)) + " JCC: %f" % (jaccard(cluster))
+
 	utils.print_cont(cont)
 	
 	print
