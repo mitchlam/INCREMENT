@@ -77,6 +77,22 @@ def cluster_data(X,Y, args):
         alg = SpectralClustering(n_clusters=args.K, affinity="nearest_neighbors")
     elif (args.initial == "kmeans"):
         alg = KMeans(n_clusters=args.K)
+    elif (args.initial == "active"):
+        clusters = []
+
+        for x,y in zip(X,Y):
+            clusters.append([Instance(x,y)])
+
+        return clusters
+
+    elif (args.initial == "none"):
+        clusters = [[]]
+
+        for x,y in zip(X,Y):
+            clusters[0].append(Instance(x,y))
+
+        return clusters
+
     else:
         raise("Model Not Supported.")
         
