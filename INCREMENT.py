@@ -1,6 +1,9 @@
 
 import utils
 import optics
+import HMRF
+
+import random
 import scipy.sparse.csgraph as csgraph
 
 
@@ -14,7 +17,7 @@ import scipy.sparse.csgraph as csgraph
 class BaseINCREMENT(object):
     #Uses naive implementations of everything
 
-    def __init__(self, clustering, distance=utils.EuclideanDistance, symmetric_distance=True, **kwargs):
+    def __init__(self, clustering, aggregator, distance=utils.EuclideanDistance, symmetric_distance=True, **kwargs):
         self.clustering = clustering
         self.subclusters = []
         self.representatives = [] #actual points, one for each subcluster. Indexes should be aligned with subcluster
@@ -22,6 +25,7 @@ class BaseINCREMENT(object):
 
         self.final = [] #store final clustering 
 
+        self.aggregator = aggregator
         self.distance = distance #function to determine distance between instances can be set for custom domains
         self.symmetric_distance = symmetric_distance #Bool stating whether or not the distance is symmetric
         
@@ -111,6 +115,19 @@ class MedoidSelector(BaseINCREMENT):
         print reps
         print
         
+class CentroidSelector(BaseINCREMENT):
+    
+    def selectRepresentatives(self, **kwargs):
+        self.representatives = []
+        reps = map(self.aggregator, self.subclusters)
+        self.representatives = reps
+        
+        '''
+        print "Representatives:"
+        print self.representatives
+        print
+        '''
+        
 ################################# Query Ordering #################################################
 
 #Base Feedback class. Simply queries for the label of each point individually and sets feedback accordingly.
@@ -151,7 +168,7 @@ class AssignmentFeedback(BaseINCREMENT):
 class MatchingFeedback(AssignmentFeedback):
     
     #Distances should be the pairwise distances between the representatives
-    def generateFeedback(self, distances, query_size=9, times_presented=1, **kwargs):
+    def generateFeedback(self, distances, query_size=9, times_presented=1, num_queries=None, **kwargs):
         
         #can only perform matching if query_size > 1
         if(query_size == 1):
@@ -172,7 +189,7 @@ class MatchingFeedback(AssignmentFeedback):
         
         feedback = []
         
-        while len(queue) > 0:
+        while len(queue) > 0 and (num_queries == None or len(feedback) < num_queries):
             i = queue[0]
             del queue[0]
             
@@ -203,6 +220,28 @@ class MatchingFeedback(AssignmentFeedback):
         print 
         print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         print
+        
+class RandomMatchingFeedback(AssignmentFeedback):
+    
+    def generateFeedback(self, query_size=9, num_queries=15, **kwargs):
+        if(query_size == 1):
+            super(MatchingFeedback, self).generateFeedback(**kwargs)
+            return
+        
+        feedback = []
+        
+        for i in range(num_queries):
+            pt_idx = random.sample(range(len(self.representatives)), query_size)
+            pts = map(lambda x: self.representatives[x], pt_idx)
+            
+            q = self.query(pts, **kwargs)
+            feedback.append(map(lambda c: map(lambda x: pt_idx[x], c), q)) #translate pt indexes to the indexes of the representatives
+ 
+        self.feedback = feedback
+        self.printFeedback(feedback)
+        
+        print
+        print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         
 class ClosestPointFeedback(MatchingFeedback):
     
@@ -295,18 +334,16 @@ class OracleMatching(BaseINCREMENT):
 
 class MergeSubclusters(BaseINCREMENT):
     
-    def mergeSubclusters(self, **kwargs):
-        self.final = []
-        feedback = []
-        
-        for f in self.feedback:
-            feedback += f
+    def mergeFeedback(self, feedback):
+        flattened = []
+        for f in feedback:
+            flattened += f
         
         
         #print "flattened Feedback:"
         #print "\t", feedback
         
-        sets = map(set, feedback)
+        sets = map(set, flattened)
         
         changed = True
         while changed:
@@ -323,25 +360,97 @@ class MergeSubclusters(BaseINCREMENT):
         
         feedback = []
         for s in sets:
+            f = list(s)
+            feedback.append(f)
+            
+        return feedback
+    
+    def mergeSubclusters(self, **kwargs):
+        self.final = []
+        
+        feedback = self.mergeFeedback(self.feedback)
+        
+        for f in feedback:
             cluster = []
-            f = []
-            for i in s:
-                f.append(i)
+            for i in f:
                 cluster += self.subclusters[i]
             self.final.append(cluster)
-            feedback.append(f)
+            
+        flattened = [x for i in feedback for x in i]
+        r = range(len(self.representatives))
+        
+        for i in r:
+            if i not in flattened:
+                self.final.append(self.subclusters[i])
         
         print "Merged Feedback:"
-        print "\t", feedback
+        print "\t", sorted(map(sorted,feedback))
         print 
 
-
+class HRMFMerge(MergeSubclusters):
+    
+    def mergeSubclusters(self, **kwargs):
+        M = []
+        C = []
         
-class ClosestINCREMENT(OpticsSubclustering, MedoidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
+        for f in self.feedback:
+            for i,x in enumerate(f):
+                for j,y in enumerate(f):
+                    #only handle symmetry
+                    if j < i:
+                        continue
+    
+                    if i == j:
+                        #Must Links
+                        for s,a in enumerate(x):
+                            for t,b in enumerate(y):
+                                if s <= t:
+                                    continue
+                                if([a,b] not in M and [b,a] not in M):
+                                    M.append([a,b])
+                    else:
+                        #Connot Links
+                        for s,a in enumerate(x):
+                            for t,b in enumerate(y):
+                                if([b,a] not in C and [a,b] not in C):
+                                    C.append([a,b])
+                                
+        
+        #print "M:", sorted(map(sorted,M))
+        #print
+        #print "C:", sorted(map(sorted,C))
+        #print
+        feedback = self.mergeFeedback(self.feedback)
+        print "Merged Feedback:"
+        print "\t", sorted(map(sorted,feedback))
+        print 
+        
+        hmrf = HMRF.HMRF(self.distance, self.aggregator)
+        
+        clusters = hmrf.cluster(self.representatives,M,C, feedback)
+        
+        print
+        print "Clustered Representatives:", sorted(map(sorted,clusters))
+        print
+        self.final = []
+        for i in clusters:
+            cluster = []
+            for x in i:
+                cluster += self.subclusters[x]
+            self.final.append(cluster)
+        
+        
+
+   
+class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
-class TreeINCREMENT(OpticsSubclustering, MedoidSelector, MinimumSpanningTreeFeedback, OracleMatching, MergeSubclusters):
+class MergeINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
+
+class RandomINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
+    pass
+
 class PathINCREMENT(OpticsSubclustering, MedoidSelector, MinimumDistanceFeedback, OracleMatching, MergeSubclusters):
     pass
 

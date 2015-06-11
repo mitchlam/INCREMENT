@@ -29,10 +29,30 @@ class Instance:
     def __init__(self, data, label=None):
         self.data = data
         self.label = label
+    
+    def __repr__(self):
+        return str(self.data)
         
     @staticmethod
     def distance(x,y):
         return Distance.euclidean(x.data,y.data)
+    
+    @staticmethod
+    def aggregate(instances):
+            
+        data = map(lambda i: i.data, instances)
+        labels = map(lambda i : i.label, instances)
+        
+        data = np.array(data)
+    
+        
+        #print "Labels:", labels
+        label = utils.mode(labels)
+        
+        I = Instance(np.average(data, axis=0), label)
+        
+        
+        return I
 
 
 def classify_data(X,Y, args, holdout = 0.8):
@@ -197,8 +217,16 @@ def formatTime(t):
     result += "%f s" %(seconds)
 
     return result
+   
+def runIncrement(args, increment, alg="INCREMENT"): 
+    print "Running %s:" % (alg)
+    start = time.clock()
+    #increment.run(minPts=args.minPts, query_size=args.query_size, times_presented=args.times_presented ,labeler = lambda p: p.label, num_queries=args.num_queries)
+    increment.run(labeler = lambda p: p.label, **vars(args))
+    end = time.clock()
+    #print "%s: (%d)  --  (%s)" % (alg,increment.num_queries,formatTime(start-end))
+    #validation.printMetrics(increment.final)
     
-
 def main(args):
 
     starttime = time.clock()
@@ -226,16 +254,19 @@ def main(args):
 
     validation.printMetrics(clusters)
 
-    increment = INCREMENT.ClosestINCREMENT(clusters, distance=Instance.distance)
-    increment.run(minPts=args.minPts, query_size=args.query_size, times_presented=args.times_presented ,labeler = lambda p: p.label)
-    
+    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate)
+    runIncrement(args,increment)
 
     
-    print "INCREMENT: (%d)  --  (%s)" % (increment.num_queries, formatTime(time.clock() - lasttime))
-    lasttime = time.clock()
-
+    rand = INCREMENT.RandomINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate)
+    runIncrement(args, rand, "HRMF")
+        
+        
+    print "INCREMENT: (%d)" % (increment.num_queries)
     validation.printMetrics(increment.final)
     
+    print "HRMF: (%d)" % (rand.num_queries)
+    validation.printMetrics(rand.final)
     
     #write data and cluster to file
     #try:
@@ -266,6 +297,7 @@ if __name__ == "__main__":
     parser.add_argument( "-m", "--minPts", help="The minPts parameter to pass to OPTICS.", type=int, default=5)
     parser.add_argument( "-q", "--query-size", help="The number of points to present to the user per query.", type=int, default=9)
     parser.add_argument( "-t", "--times-presented", help="The minimum number of times a point is presented to the user.", type=int, default=1)
+    parser.add_argument( "-n", "--num-queries", help="The number of queries to answer.", type=int)
     parser.add_argument( "-k", metavar="Clusters" , help="The number of clusters to use with the initial clustering algorithm (where applicable).", type=int, default=20, dest="K")
     parser.add_argument("-i", "--initial", help="Initial clustering algorithm", type=str, default = "kmeans")
     parser.add_argument("-s", "--supervised", help="Specify whether or not to use a supervised model to form initial clustering.", action="store_true")
