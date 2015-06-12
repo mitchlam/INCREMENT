@@ -17,7 +17,7 @@ import scipy.sparse.csgraph as csgraph
 class BaseINCREMENT(object):
     #Uses naive implementations of everything
 
-    def __init__(self, clustering, aggregator, distance=utils.EuclideanDistance, symmetric_distance=True, **kwargs):
+    def __init__(self, clustering, distance=utils.EuclideanDistance, symmetric_distance=True, **kwargs):
         self.clustering = clustering
         self.subclusters = []
         self.representatives = [] #actual points, one for each subcluster. Indexes should be aligned with subcluster
@@ -25,7 +25,6 @@ class BaseINCREMENT(object):
 
         self.final = [] #store final clustering 
 
-        self.aggregator = aggregator
         self.distance = distance #function to determine distance between instances can be set for custom domains
         self.symmetric_distance = symmetric_distance #Bool stating whether or not the distance is symmetric
         
@@ -61,6 +60,12 @@ class BaseINCREMENT(object):
         self.generateFeedback(**kwargs)
         self.mergeSubclusters(**kwargs)
 
+class CentroidINCREMENT(BaseINCREMENT):
+    
+    def __init__(self, clustering, aggregator, **kwargs):
+        super(CentroidINCREMENT, self).__init__(clustering, **kwargs)
+        self.aggregator = aggregator
+        
 ################################# Sub-Clustering ##########################################################
 class OpticsSubclustering(BaseINCREMENT):
 
@@ -115,7 +120,7 @@ class MedoidSelector(BaseINCREMENT):
         print reps
         print
         
-class CentroidSelector(BaseINCREMENT):
+class CentroidSelector(CentroidINCREMENT):
     
     def selectRepresentatives(self, **kwargs):
         self.representatives = []
@@ -165,11 +170,14 @@ class AssignmentFeedback(BaseINCREMENT):
         print "Number of Assignement Queries: %d" % (self.num_queries)
         print
    
-class MatchingFeedback(AssignmentFeedback):
+class MinimumDistanceFeedback(AssignmentFeedback):
     
     #Distances should be the pairwise distances between the representatives
     def generateFeedback(self, distances, query_size=9, times_presented=1, num_queries=None, **kwargs):
         
+        if times_presented == None:
+            times_presented=1
+            
         #can only perform matching if query_size > 1
         if(query_size == 1):
             super(MatchingFeedback, self).generateFeedback(**kwargs)
@@ -220,7 +228,132 @@ class MatchingFeedback(AssignmentFeedback):
         print 
         print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         print
+
+class LinkFeedback(AssignmentFeedback):
+    
+    
+    def completeLink(self, distances, pt, group):
+        dist = []
+        for g in group:
+            dist.append(distances[g])
         
+        return max(dist)
+        
+    #Distances should be the pairwise distances between the representatives
+    def generateFeedback(self, distances, query_size=9, times_presented=2, num_queries=None, **kwargs):
+        
+        if times_presented == None:
+            times_presented = 2
+            
+        #can only perform matching if query_size > 1
+        if(query_size == 1):
+            super(LinkFeedback, self).generateFeedback(**kwargs)
+            return
+
+        #include index to retrieve the actual point after sorting
+        rep_distances = map(lambda d: zip(d, range(len(d))) , distances )
+
+
+        feedback = []
+    
+        #How often a point has been presented
+        presented = [0] * len(distances)
+        
+        focusPoints = []
+        focus = random.choice(range(len(presented)))
+        
+        candidates = set([focus])
+        
+        while(num_queries == None or self.num_queries < num_queries):
+            
+            dist = sorted(rep_distances[focus][:])
+            
+            #Try to present what has not been presented too many times
+            toPresent = filter(lambda p: presented[p[1]] < times_presented,dist)
+            
+            #print "Focus:", focus
+            
+            #ensure we dont ask for too many points
+            size = query_size
+            if (len(toPresent) < size):
+                #print "Not enough unPresented Points"
+                #if we need more points, take it from the presented points
+                _presented = filter(lambda p: presented[p[1]] >= times_presented,dist)
+                #print "unpresented:", map(lambda d: d[1], toPresent[:size])
+                
+                diff = size - len(toPresent)
+                
+                #Ensure we have enough points to present
+                if(len(_presented) < diff):
+                    diff = len(_presented)
+                
+                
+                #print "Already presented:", map(lambda d: d[1], _presented[:diff])
+                
+                toPresent += _presented[:diff]
+                size = len(toPresent)
+            
+            #translate point index to points
+            pt_idx = map(lambda d: d[1], toPresent[:size])
+            pts = map(lambda x: self.representatives[x], pt_idx)
+            
+            #print "pt_idx:", pt_idx
+            
+            #Query
+            q = self.query(pts, **kwargs) 
+            feedback.append(map(lambda c: map(lambda x: pt_idx[x], c), q)) #translate pt indexes to the indexes of the representatives
+        
+            #Count the points as presented
+            for p in pt_idx:
+                presented[p] += 1
+                candidates.add(p)
+            
+            #print "presented:", presented
+            #print "Times_Presented:", times_presented
+            #update candidates
+            update = filter(lambda p: presented[p] < times_presented, candidates)
+            
+            candidates = set(update)
+            #print "Candidates:", candidates
+            
+            focusPoints.append(focus)    
+            
+            #print "FocusPoints:", focusPoints
+            
+            if(len(update) == 0):
+                left = filter(lambda p: presented[p] < times_presented, range(len(presented)))
+                if len(left) == 0:
+                    break
+                
+                focus = random.choice(left)
+                continue
+            
+            #find new focus
+            linkDist = sorted(map(lambda p: (self.completeLink(distances[p],p, focusPoints),p), candidates))
+            focus = linkDist[-1][1]
+        
+            '''
+            print "LinkDist:", linkDist
+            print "NextFocus:", focus
+        
+            print
+            print
+            '''
+        self.feedback = feedback
+        self.printFeedback(feedback)
+        print 
+        print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
+        
+        left = filter(lambda p: presented[p] < times_presented, range(len(presented)))
+        
+        if len(left) != 0:
+            print "Missed Points:", left
+            
+        print
+        
+        
+            
+
 class RandomMatchingFeedback(AssignmentFeedback):
     
     def generateFeedback(self, query_size=9, num_queries=15, **kwargs):
@@ -243,7 +376,7 @@ class RandomMatchingFeedback(AssignmentFeedback):
         print
         print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         
-class ClosestPointFeedback(MatchingFeedback):
+class ClosestPointFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
     def generateFeedback(self, **kwargs):    
@@ -252,10 +385,17 @@ class ClosestPointFeedback(MatchingFeedback):
         super(ClosestPointFeedback,self).generateFeedback(distances, **kwargs)
        
     #distances should be the pairwise distances between the reps
+
+class FarthestLinkFeedback(LinkFeedback):
     
+    #Organizes and manages the presentation of representatives and user feedback
+    def generateFeedback(self, **kwargs):    
+        distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
+        
+        super(FarthestLinkFeedback,self).generateFeedback(distances, **kwargs)    
 
 
-class MinimumSpanningTreeFeedback(MatchingFeedback):
+class MinimumSpanningTreeFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
     def generateFeedback(self, **kwargs):
@@ -267,7 +407,7 @@ class MinimumSpanningTreeFeedback(MatchingFeedback):
         super(MinimumSpanningTreeFeedback, self). generateFeedback(distances, **kwargs)
         
 
-class MinimumDistanceFeedback(MatchingFeedback):
+class DistanceFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
     def generateFeedback(self, **kwargs):
@@ -387,7 +527,7 @@ class MergeSubclusters(BaseINCREMENT):
         print "\t", sorted(map(sorted,feedback))
         print 
 
-class HRMFMerge(MergeSubclusters):
+class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
     
     def mergeSubclusters(self, **kwargs):
         M = []
@@ -448,10 +588,10 @@ class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback,
 class MergeINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
 
-class RandomINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
+class RandomINCREMENT(OpticsSubclustering, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
     pass
 
-class PathINCREMENT(OpticsSubclustering, MedoidSelector, MinimumDistanceFeedback, OracleMatching, MergeSubclusters):
+class PathINCREMENT(OpticsSubclustering, MedoidSelector, DistanceFeedback, OracleMatching, MergeSubclusters):
     pass
 
 

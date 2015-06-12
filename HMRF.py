@@ -37,7 +37,7 @@ class HMRF:
 		print "Merge:", sorted(map(sorted,M))
 		'''
 		print
-		print "Neighborhood:", sorted(map(sorted,neighborhood))
+		print "Neighborhood: (%d)" % (len(neighborhood)), sorted(map(sorted,neighborhood))
 		
 		n = map(lambda a: map(lambda x: data[x], a), neighborhood)
 		#print n

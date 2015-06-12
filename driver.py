@@ -296,7 +296,7 @@ if __name__ == "__main__":
     parser.add_argument( "-o", "--out", metavar="Output", help="The file in which to store INCREMENT's final clustering.", dest="output")
     parser.add_argument( "-m", "--minPts", help="The minPts parameter to pass to OPTICS.", type=int, default=5)
     parser.add_argument( "-q", "--query-size", help="The number of points to present to the user per query.", type=int, default=9)
-    parser.add_argument( "-t", "--times-presented", help="The minimum number of times a point is presented to the user.", type=int, default=1)
+    parser.add_argument( "-t", "--times-presented", help="The minimum number of times a point is presented to the user.", type=int)
     parser.add_argument( "-n", "--num-queries", help="The number of queries to answer.", type=int)
     parser.add_argument( "-k", metavar="Clusters" , help="The number of clusters to use with the initial clustering algorithm (where applicable).", type=int, default=20, dest="K")
     parser.add_argument("-i", "--initial", help="Initial clustering algorithm", type=str, default = "kmeans")
