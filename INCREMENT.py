@@ -17,7 +17,7 @@ import scipy.sparse.csgraph as csgraph
 class BaseINCREMENT(object):
     #Uses naive implementations of everything
 
-    def __init__(self, clustering, distance=utils.EuclideanDistance, symmetric_distance=True, **kwargs):
+    def __init__(self, clustering, distance=utils.EuclideanDistance, symmetric_distance=True, verbose=True, **kwargs):
         self.clustering = clustering
         self.subclusters = []
         self.representatives = [] #actual points, one for each subcluster. Indexes should be aligned with subcluster
@@ -29,6 +29,8 @@ class BaseINCREMENT(object):
         self.symmetric_distance = symmetric_distance #Bool stating whether or not the distance is symmetric
         
         self.num_queries = 0
+        
+        self.verbose = verbose
 
     def setInstanceDistance(func):
         self.distance = func
@@ -52,8 +54,9 @@ class BaseINCREMENT(object):
         self.final = self.subclusters
 
     def run(self, **kwargs):
-        print "Running INCREMENT"
-        print
+        if self.verbose:
+            print "Running INCREMENT"
+            print
         
         self.subcluster(**kwargs)
         self.selectRepresentatives(**kwargs)
@@ -74,15 +77,18 @@ class OpticsSubclustering(BaseINCREMENT):
         
         self.subclusters = []
         
-        print "Computing Distance"
+        if self.verbose:
+            print "Computing Distance"
         distances = map(lambda x:utils.pairwise(x,self.distance, self.symmetric_distance), self.clustering) #N^2 where N is the number of instances per cluster -- SLOW
         #print distances
         
-        print "Running OPTICS: minPts = %d" % (minPts)
+        if self.verbose:
+            print "Running OPTICS: minPts = %d" % (minPts)
         output = map(lambda d: optics.OPTICS(d, minPts), distances)
         separated = map(lambda o: optics.separateClusters(o, minPts, display=display), output)
-        
-        print "Sub-Clustering:"
+    
+        if self.verbose:    
+            print "Sub-Clustering:"
         
         for c,sep in enumerate(separated):
             ids = map(lambda sc: map(lambda x: x._id, sc), sep)
@@ -94,10 +100,12 @@ class OpticsSubclustering(BaseINCREMENT):
                 lengths.append(len(clust))
                 
                 self.subclusters.append(clust)
-            print "\t%d: %d => %s" %(c, len(lengths), lengths)
+            if self.verbose:
+                print "\t%d: %d => %s" %(c, len(lengths), lengths)
         
-        print "Subclusters Formed:", len(self.subclusters)
-        print 
+        if self.verbose:
+            print "Subclusters Formed:", len(self.subclusters)
+            print 
         
 
 ################################# Representative Selection #################################################
@@ -115,10 +123,11 @@ class MedoidSelector(BaseINCREMENT):
             m = utils.arg_min(sums)
             reps.append(m)
             self.representatives.append(self.subclusters[i][m])
-        
-        print "Representatives:"
-        print reps
-        print
+            
+        if self.verbose:
+            print "Representatives:"
+            print reps
+            print
         
 class CentroidSelector(CentroidINCREMENT):
     
@@ -146,7 +155,9 @@ class AssignmentFeedback(BaseINCREMENT):
     
     #Organizes and manages the presentation of representatives and user feedback
     def generateFeedback(self, **kwargs):
-        print "Assignment Query"
+        if self.verbose:
+            print "Assignment Query"
+        
         labels = {}
         
         
@@ -164,11 +175,11 @@ class AssignmentFeedback(BaseINCREMENT):
             
         self.feedback = feedback
         
-        
-        self.printFeedback(feedback)
-        print
-        print "Number of Assignement Queries: %d" % (self.num_queries)
-        print
+        if self.verbose:
+            self.printFeedback(feedback)
+            print
+            print "Number of Assignement Queries: %d" % (self.num_queries)
+            print
    
 class MinimumDistanceFeedback(AssignmentFeedback):
     
@@ -180,7 +191,7 @@ class MinimumDistanceFeedback(AssignmentFeedback):
             
         #can only perform matching if query_size > 1
         if(query_size == 1):
-            super(MatchingFeedback, self).generateFeedback(**kwargs)
+            super(MinimumDistanceFeedback, self).generateFeedback(**kwargs)
             return
         
          #include index to retrieve the actual point after sorting
@@ -224,10 +235,11 @@ class MinimumDistanceFeedback(AssignmentFeedback):
     
         self.feedback = feedback
         
-        self.printFeedback(feedback)
-        print 
-        print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
-        print
+        if self.verbose:
+            self.printFeedback(feedback)
+            print 
+            print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
+            print
 
 class LinkFeedback(AssignmentFeedback):
     
@@ -321,7 +333,7 @@ class LinkFeedback(AssignmentFeedback):
             #print "FocusPoints:", focusPoints
             
             if(len(update) == 0):
-                left = filter(lambda p: presented[p] < times_presented, range(len(presented)))
+                left = filter(lambda p: presented[p] < times_presented/2, range(len(presented)))
                 if len(left) == 0:
                     break
                 
@@ -340,16 +352,19 @@ class LinkFeedback(AssignmentFeedback):
             print
             '''
         self.feedback = feedback
-        self.printFeedback(feedback)
-        print 
-        print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
+        
+        if self.verbose:
+            self.printFeedback(feedback)
+            print 
+            print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         
         left = filter(lambda p: presented[p] < times_presented, range(len(presented)))
         
-        if len(left) != 0:
-            print "Missed Points:", left
+        if self.verbose:
+            if len(left) != 0:
+                print "Missed Points:", left
             
-        print
+            print
         
         
             
@@ -371,10 +386,12 @@ class RandomMatchingFeedback(AssignmentFeedback):
             feedback.append(map(lambda c: map(lambda x: pt_idx[x], c), q)) #translate pt indexes to the indexes of the representatives
  
         self.feedback = feedback
-        self.printFeedback(feedback)
         
-        print
-        print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
+        if self.verbose:
+            self.printFeedback(feedback)
+        
+            print
+            print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         
 class ClosestPointFeedback(MinimumDistanceFeedback):
     
@@ -523,9 +540,10 @@ class MergeSubclusters(BaseINCREMENT):
             if i not in flattened:
                 self.final.append(self.subclusters[i])
         
-        print "Merged Feedback:"
-        print "\t", sorted(map(sorted,feedback))
-        print 
+        if self.verbose:
+            print "Merged Feedback:"
+            print "\t", sorted(map(sorted,feedback))
+            print 
 
 class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
     
@@ -561,17 +579,22 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
         #print "C:", sorted(map(sorted,C))
         #print
         feedback = self.mergeFeedback(self.feedback)
-        print "Merged Feedback:"
-        print "\t", sorted(map(sorted,feedback))
-        print 
+        
+        if self.verbose:
+            print "Merged Feedback:"
+            print "\t", sorted(map(sorted,feedback))
+            print 
         
         hmrf = HMRF.HMRF(self.distance, self.aggregator)
         
         clusters = hmrf.cluster(self.representatives,M,C, feedback)
         
-        print
-        print "Clustered Representatives:", sorted(map(sorted,clusters))
-        print
+        if self.verbose:
+            print
+            print "Clustered Representatives:", sorted(map(sorted,clusters))
+            print
+        
+        
         self.final = []
         for i in clusters:
             cluster = []
@@ -588,10 +611,13 @@ class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback,
 class MergeINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
 
-class RandomINCREMENT(OpticsSubclustering, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
+class OtherINCREMENT(OpticsSubclustering, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
     pass
 
 class PathINCREMENT(OpticsSubclustering, MedoidSelector, DistanceFeedback, OracleMatching, MergeSubclusters):
+    pass
+
+class AssignmentINCREMENT(OpticsSubclustering, CentroidSelector, AssignmentFeedback, OracleMatching, MergeSubclusters):
     pass
 
 

@@ -222,7 +222,7 @@ def runIncrement(args, increment, alg="INCREMENT"):
     print "Running %s:" % (alg)
     start = time.clock()
     #increment.run(minPts=args.minPts, query_size=args.query_size, times_presented=args.times_presented ,labeler = lambda p: p.label, num_queries=args.num_queries)
-    increment.run(labeler = lambda p: p.label, **vars(args))
+    increment.run(labeler = lambda p: p.label, **args)
     end = time.clock()
     #print "%s: (%d)  --  (%s)" % (alg,increment.num_queries,formatTime(start-end))
     #validation.printMetrics(increment.final)
@@ -254,19 +254,25 @@ def main(args):
 
     validation.printMetrics(clusters)
 
-    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate)
-    runIncrement(args,increment)
+    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
+    runIncrement(vars(args),increment)
 
     
-    rand = INCREMENT.RandomINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate)
-    runIncrement(args, rand, "HRMF")
-        
+    other = INCREMENT.OtherINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
+    runIncrement(vars(args), other, "Other")
+    
+    oracle = INCREMENT.AssignmentINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=False)
+    runIncrement(vars(args), oracle, "Oracle")
         
     print "INCREMENT: (%d)" % (increment.num_queries)
     validation.printMetrics(increment.final)
     
-    print "HRMF: (%d)" % (rand.num_queries)
-    validation.printMetrics(rand.final)
+    print "Other: (%d)" % (other.num_queries)
+    validation.printMetrics(other.final)
+    
+    print "Oracle: (%d)" %(oracle.num_queries)
+    validation.printMetrics(oracle.final)
+    
     
     #write data and cluster to file
     #try:
@@ -301,10 +307,13 @@ if __name__ == "__main__":
     parser.add_argument( "-k", metavar="Clusters" , help="The number of clusters to use with the initial clustering algorithm (where applicable).", type=int, default=20, dest="K")
     parser.add_argument("-i", "--initial", help="Initial clustering algorithm", type=str, default = "kmeans")
     parser.add_argument("-s", "--supervised", help="Specify whether or not to use a supervised model to form initial clustering.", action="store_true")
+    parser.add_argument("-v", "--verbose", help="Set INCREMENT to print verbosely.", action="store_true")
     
     
     args = parser.parse_args()
     main(args)
+    
+    print "Verbose", args.verbose
 
 
 
