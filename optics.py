@@ -82,7 +82,7 @@ def OPTICS(distances, minPts, cluster=None):
     
     points = map(dataPoint, range(len(distances)))
     
-    #random.shuffle(points)
+    random.shuffle(points)
     output = []
     
     for p in points:

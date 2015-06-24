@@ -35,7 +35,8 @@ class Instance:
         
     @staticmethod
     def distance(x,y):
-        return Distance.euclidean(x.data,y.data)
+        return np.linalg.norm(x.data-y.data, ord = 1)
+        #return Distance.euclidean(x.data,y.data)
     
     @staticmethod
     def aggregate(instances):
@@ -257,22 +258,27 @@ def main(args):
     increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
     runIncrement(vars(args),increment)
 
-    
+    ''' 
     other = INCREMENT.OtherINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
     runIncrement(vars(args), other, "Other")
     
     oracle = INCREMENT.AssignmentINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=False)
     runIncrement(vars(args), oracle, "Oracle")
-        
+    '''    
     print "INCREMENT: (%d)" % (increment.num_queries)
+    print "SubClusters"
+    validation.printMetrics(increment.subclusters)
+    print
+    print "Final"
     validation.printMetrics(increment.final)
     
+    '''
     print "Other: (%d)" % (other.num_queries)
     validation.printMetrics(other.final)
     
     print "Oracle: (%d)" %(oracle.num_queries)
     validation.printMetrics(oracle.final)
-    
+    '''
     
     #write data and cluster to file
     #try:
@@ -308,12 +314,13 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--initial", help="Initial clustering algorithm", type=str, default = "kmeans")
     parser.add_argument("-s", "--supervised", help="Specify whether or not to use a supervised model to form initial clustering.", action="store_true")
     parser.add_argument("-v", "--verbose", help="Set INCREMENT to print verbosely.", action="store_true")
+    parser.add_argument("-N", "--normalize", help="Normalize Data", action="store_true")
     
     
     args = parser.parse_args()
     main(args)
     
-    print "Verbose", args.verbose
+    #print "Verbose", args.verbose
 
 
 

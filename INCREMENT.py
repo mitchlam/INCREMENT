@@ -5,6 +5,7 @@ import HMRF
 
 import random
 import scipy.sparse.csgraph as csgraph
+import numpy as np
 
 
 #class Cluster:
@@ -72,23 +73,54 @@ class CentroidINCREMENT(BaseINCREMENT):
 ################################# Sub-Clustering ##########################################################
 class OpticsSubclustering(BaseINCREMENT):
 
-    #Performs OPTICS to subcluster the current clustering
-    def subcluster(self, minPts=5, display=False, **kwargs):
+    #performs and subclusters a single cluster of points
+    def performOPTICS(self, distance, minPts, display):
+        out = optics.OPTICS(distance, minPts)
+        sep = optics.separateClusters(out, minPts, display=display)
         
-        self.subclusters = []
-        
-        if self.verbose:
-            print "Computing Distance"
-        distances = map(lambda x:utils.pairwise(x,self.distance, self.symmetric_distance), self.clustering) #N^2 where N is the number of instances per cluster -- SLOW
-        #print distances
-        
-        if self.verbose:
-            print "Running OPTICS: minPts = %d" % (minPts)
-        output = map(lambda d: optics.OPTICS(d, minPts), distances)
-        separated = map(lambda o: optics.separateClusters(o, minPts, display=display), output)
+        return out, sep
     
-        if self.verbose:    
-            print "Sub-Clustering:"
+    def breakdown(self, output, separated, indent=""):
+        reachability = map(lambda c: map(lambda x: x.reachability, c), output)
+        avgs = map(lambda c:sum(c)/len(c), reachability)
+        stds = map(lambda c: np.std(c), reachability)
+            
+        subavgs = []
+        substds = []
+        for c, sep in enumerate(separated):
+            idx = 0
+            subavgs.append([])
+            substds.append([])
+            for i, s in enumerate(sep):
+                tmp = reachability[c][idx:idx+len(s)]
+                avg = sum(tmp)/len(tmp)
+                subavgs[c].append(avg)
+                substds[c].append(np.std(tmp))
+                idx += len(s)
+                
+        idx = 0
+        
+        print
+        if indent == "":
+            print "Subcluster Breakdown:"
+            
+        for c, sub in enumerate(subavgs):
+            print indent + "\t%d: %f (%d)" % (c, avgs[c], sum(map(len, separated[c])))
+            for i, a in enumerate(sub):
+                print indent + "\t\t%d: %f -- %f  (%d)" % (idx, a, substds[c][i], len(separated[c][i]))
+                idx += 1
+            print indent + "\t--> std: %f -- %f" % (stds[c], np.std(substds[c]))
+            print
+            
+        print indent + "\tAvg: %f -- %f " % (sum(avgs)/len(avgs), np.std(avgs))
+        print indent + "\tStd: %f -- %f " % (sum(stds)/len(stds), np.std(stds))
+        print indent + "Subclusters Formed:", len(self.subclusters)
+        print
+
+
+    # assumes separated in of the form [Partition][subcluster][Point]
+    def mergeSeparated(self, separated):
+        subclusters = []
         
         for c,sep in enumerate(separated):
             ids = map(lambda sc: map(lambda x: x._id, sc), sep)
@@ -99,14 +131,35 @@ class OpticsSubclustering(BaseINCREMENT):
                     clust.append(self.clustering[c][i])
                 lengths.append(len(clust))
                 
-                self.subclusters.append(clust)
-            if self.verbose:
-                print "\t%d: %d => %s" %(c, len(lengths), lengths)
+                subclusters.append(clust)
+                
+        return subclusters
+    
+    
+    #Performs OPTICS to subcluster the current clustering
+    def subcluster(self, minPts=5, display=False, **kwargs):
+        
+        self.subclusters = []
         
         if self.verbose:
-            print "Subclusters Formed:", len(self.subclusters)
-            print 
+            print "Computing Distance"
+            
+        distances = map(lambda x:utils.pairwise(x,self.distance, self.symmetric_distance), self.clustering) #N^2 where N is the number of instances per cluster -- SLOW
         
+        if self.verbose:
+            print "Running OPTICS: minPts = %d" % (minPts)
+        
+        output, separated = zip(*map(lambda d: self.performOPTICS(d, minPts, display), distances))
+        
+        self.subclusters = self.mergeSeparated(separated)
+        
+        
+        if self.verbose:
+            self.breakdown(output,separated)
+
+
+class RecursiveOPTICS(OpticsSubclustering):
+    pass
 
 ################################# Representative Selection #################################################
 class MedoidSelector(BaseINCREMENT):
@@ -542,7 +595,8 @@ class MergeSubclusters(BaseINCREMENT):
         
         if self.verbose:
             print "Merged Feedback:"
-            print "\t", sorted(map(sorted,feedback))
+            for i, f in enumerate(sorted(map(sorted,feedback))):
+                print "\t", i, ":", f
             print 
 
 class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
