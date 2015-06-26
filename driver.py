@@ -35,8 +35,9 @@ class Instance:
         
     @staticmethod
     def distance(x,y):
-        return np.linalg.norm(x.data-y.data, ord = 1)
+        #return np.linalg.norm(x.data-y.data, ord = 1)
         #return Distance.euclidean(x.data,y.data)
+        return Distance.cityblock(x.data,y.data)
     
     @staticmethod
     def aggregate(instances):
@@ -97,7 +98,7 @@ def cluster_data(X,Y, args):
     elif (args.initial == "spectral"):
         alg = SpectralClustering(n_clusters=args.K, affinity="nearest_neighbors")
     elif (args.initial == "kmeans"):
-        alg = KMeans(n_clusters=args.K)
+        alg = KMeans(n_clusters=args.K, precompute_distances=True, n_jobs=-1)
     elif (args.initial == "active"):
         clusters = []
 
@@ -258,27 +259,33 @@ def main(args):
     increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
     runIncrement(vars(args),increment)
 
-    ''' 
+    
     other = INCREMENT.OtherINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
     runIncrement(vars(args), other, "Other")
     
+    
+    
     oracle = INCREMENT.AssignmentINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=False)
     runIncrement(vars(args), oracle, "Oracle")
-    '''    
+    
+    
     print "INCREMENT: (%d)" % (increment.num_queries)
-    print "SubClusters"
-    validation.printMetrics(increment.subclusters)
+    #print "SubClusters"
+    #validation.printMetrics(increment.subclusters)
+    
     print
     print "Final"
     validation.printMetrics(increment.final)
     
-    '''
+    
     print "Other: (%d)" % (other.num_queries)
     validation.printMetrics(other.final)
     
+    
+        
     print "Oracle: (%d)" %(oracle.num_queries)
     validation.printMetrics(oracle.final)
-    '''
+    
     
     #write data and cluster to file
     #try:

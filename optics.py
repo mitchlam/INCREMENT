@@ -62,7 +62,13 @@ class dataPoint:
     
     def __hash__(self):
         return hash(self._id)
-
+    
+    def __str__(self):
+        return str(self._id_)
+    
+    def __repr__(self):
+        return repr(self._id)
+    
 
 def OPTICS_update(distances, N, p, seeds, minPts):
     coredist = p.core_distance(distances, minPts)
@@ -82,7 +88,7 @@ def OPTICS(distances, minPts, cluster=None):
     
     points = map(dataPoint, range(len(distances)))
     
-    random.shuffle(points)
+    #random.shuffle(points)
     output = []
     
     for p in points:

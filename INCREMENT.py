@@ -6,7 +6,7 @@ import HMRF
 import random
 import scipy.sparse.csgraph as csgraph
 import numpy as np
-
+import sys
 
 #class Cluster:
     
@@ -118,8 +118,8 @@ class OpticsSubclustering(BaseINCREMENT):
         print
 
 
-    # assumes separated in of the form [Partition][subcluster][Point]
-    def mergeSeparated(self, separated):
+    # assumes separated in of the form [Partition][subcluster][OPTICS POINT]
+    def mapSeparated(self, separated):
         subclusters = []
         
         for c,sep in enumerate(separated):
@@ -151,7 +151,7 @@ class OpticsSubclustering(BaseINCREMENT):
         
         output, separated = zip(*map(lambda d: self.performOPTICS(d, minPts, display), distances))
         
-        self.subclusters = self.mergeSeparated(separated)
+        self.subclusters = self.mapSeparated(separated)
         
         
         if self.verbose:
@@ -159,7 +159,101 @@ class OpticsSubclustering(BaseINCREMENT):
 
 
 class RecursiveOPTICS(OpticsSubclustering):
-    pass
+    
+    #Return of the format Output, subclusters
+    #subclusters: [Subcluster][OPTIC POINT]
+    def performOPTICS(self, distance, minPts, display, level = 0):
+        
+        indent = "\t"*level
+        start = len(distance)
+        
+        curried = lambda d: super(RecursiveOPTICS, self).performOPTICS(d, minPts, display) 
+        
+        output, subclusters = curried(distance) # Has bug, if there is only a single point, it isnt put in a subcluster
+        
+        if len(subclusters) == 0:
+            return output, [output[:]]
+        
+        #Base Case -- Return when there is only a single subcluster
+        if len(subclusters) == 1:
+            #return output, subclusters # Uncomment to recurse a single subclsuter
+        
+            if minPts <= 2 or start < 2:
+                return output, subclusters
+            else:
+                minPts /= 2
+                #return super(RecursiveOPTICS, self).performOPTICS(distance, minPts, display)
+                return self.performOPTICS(distance, minPts, display)
+        
+        
+        #Intermediate case
+        
+        #parse out ids
+        idxs = map(lambda sub: map(lambda s: s._id, sub), subclusters)
+        
+        distance = np.array(distance)
+        
+        dist = []
+        #Filter distances
+        for sub in idxs:
+            dist.append(distance[np.ix_(sub,sub)])
+        
+        #if minPts > 2:
+        #    minPts = minPts/2
+        
+        #Recursive step
+        try:
+            out, sep = zip(*map(lambda d: self.performOPTICS(d, minPts, display, level+1), dist))
+        except ValueError:
+            print "Value Error"
+            print "distance", len(distance)
+            print "Dists:", map(len,dist)
+            print "Minpts:", minPts
+            print "output:", output
+            print "subclusters:", subclusters
+            
+            sys.exit()
+            
+        
+        #translate sep indexes back
+        sep = list(sep)
+    
+        #print "idxs", idxs
+    
+        #print sep
+    
+        result = []
+        for i, p in enumerate(sep):
+            for sub in p:
+                for s in sub:
+                    s._id = idxs[i][s._id]
+                result.append(sub)
+        
+                
+        #print "result", result
+        
+        out = [i for x in out for i in x]
+        
+        lens = map(len, result)
+        end = sum(lens)
+        
+        
+        
+        if start != end:
+            print indent + "Points Given:", start
+            print indent + "Points Returning:", end
+            
+            print indent + "Error: Missing Points"
+            
+            indent += "\t"
+            
+            print indent + "idsx", idxs
+            print indent + "sep", sep
+            print indent + "dists:", map(len,dist)
+            print indent + "results:", lens
+        
+        return out, result
+    
 
 ################################# Representative Selection #################################################
 class MedoidSelector(BaseINCREMENT):
@@ -659,19 +753,19 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
         
 
    
-class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
+class HRMFINCREMENT(RecursiveOPTICS, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
 class MergeINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
 
-class OtherINCREMENT(OpticsSubclustering, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
+class OtherINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
     pass
 
-class PathINCREMENT(OpticsSubclustering, MedoidSelector, DistanceFeedback, OracleMatching, MergeSubclusters):
+class PathINCREMENT(RecursiveOPTICS, MedoidSelector, DistanceFeedback, OracleMatching, MergeSubclusters):
     pass
 
-class AssignmentINCREMENT(OpticsSubclustering, CentroidSelector, AssignmentFeedback, OracleMatching, MergeSubclusters):
+class AssignmentINCREMENT(RecursiveOPTICS, CentroidSelector, AssignmentFeedback, OracleMatching, MergeSubclusters):
     pass
 
 
