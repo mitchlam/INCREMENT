@@ -259,33 +259,37 @@ def main(args):
     increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
     runIncrement(vars(args),increment)
 
-    
+    '''
     other = INCREMENT.OtherINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
     runIncrement(vars(args), other, "Other")
+    '''
     
-    
-    
+    '''
     oracle = INCREMENT.AssignmentINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, verbose=False)
     runIncrement(vars(args), oracle, "Oracle")
-    
+    '''
     
     print "INCREMENT: (%d)" % (increment.num_queries)
-    #print "SubClusters"
-    #validation.printMetrics(increment.subclusters)
+    print "SubClusters"
+    validation.printMetrics(increment.subclusters)
     
     print
     print "Final"
     validation.printMetrics(increment.final)
     
-    
+    '''
     print "Other: (%d)" % (other.num_queries)
+    
+    print "Subclusters:"
+    validation.printMetrics(other.subclusters)
+    print
     validation.printMetrics(other.final)
+    '''
     
-    
-        
+    '''    
     print "Oracle: (%d)" %(oracle.num_queries)
     validation.printMetrics(oracle.final)
-    
+    '''
     
     #write data and cluster to file
     #try:

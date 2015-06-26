@@ -164,6 +164,9 @@ class RecursiveOPTICS(OpticsSubclustering):
     #subclusters: [Subcluster][OPTIC POINT]
     def performOPTICS(self, distance, minPts, display, level = 0):
         
+        if minPts < 2:
+            minPts = 2
+        
         indent = "\t"*level
         start = len(distance)
         
@@ -171,7 +174,12 @@ class RecursiveOPTICS(OpticsSubclustering):
         
         output, subclusters = curried(distance) # Has bug, if there is only a single point, it isnt put in a subcluster
         
+        if self.verbose:
+            print indent + "{%d} Begin (%d): %d" % (level, start, minPts)
+        
         if len(subclusters) == 0:
+            if self.verbose:
+                print indent + "{%d} End Single" % (level)
             return output, [output[:]]
         
         #Base Case -- Return when there is only a single subcluster
@@ -179,11 +187,19 @@ class RecursiveOPTICS(OpticsSubclustering):
             #return output, subclusters # Uncomment to recurse a single subclsuter
         
             if minPts <= 2 or start < 2:
+                if self.verbose:
+                    print indent + "{%d} Indivisable" % (level)
+                    
                 return output, subclusters
             else:
-                minPts /= 2
-                #return super(RecursiveOPTICS, self).performOPTICS(distance, minPts, display)
-                return self.performOPTICS(distance, minPts, display)
+                
+                #return super(RecursiveOPTICS, self).performOPTICS(distance, minPts/2, display)
+                output, subclusters = self.performOPTICS(distance, minPts/2, display, level + 1)
+                
+                if self.verbose:
+                    print indent + "{%d} End Reduce (%d) : %d" % (level, start, minPts)
+                    
+                return output, subclusters
         
         
         #Intermediate case
@@ -218,6 +234,8 @@ class RecursiveOPTICS(OpticsSubclustering):
         #translate sep indexes back
         sep = list(sep)
     
+        #if self.verbose:
+        #    self.breakdown(out, sep, indent=indent)
         #print "idxs", idxs
     
         #print sep
@@ -238,6 +256,9 @@ class RecursiveOPTICS(OpticsSubclustering):
         end = sum(lens)
         
         
+
+        if self.verbose:
+            print indent + "{%d} End (%d)" % (level, end)
         
         if start != end:
             print indent + "Points Given:", start
@@ -251,6 +272,7 @@ class RecursiveOPTICS(OpticsSubclustering):
             print indent + "sep", sep
             print indent + "dists:", map(len,dist)
             print indent + "results:", lens
+        
         
         return out, result
     
@@ -753,10 +775,10 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
         
 
    
-class HRMFINCREMENT(RecursiveOPTICS, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
+class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
-class MergeINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
+class MergeINCREMENT(RecursiveOPTICS, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
     pass
 
 class OtherINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
