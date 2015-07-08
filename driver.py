@@ -5,6 +5,7 @@ import numpy as np
 import utils
 import validation
 import time
+import random
 
 import argparse
 
@@ -113,6 +114,19 @@ def cluster_data(X,Y, args):
         for x,y in zip(X,Y):
             clusters[0].append(Instance(x,y))
 
+        return clusters
+    
+    elif(args.initial == "random"):
+        clusters = []
+        K = args.K
+        for k in range(K):
+            clusters.append([])
+
+        for x,y in zip(X,Y):
+            k = random.randint(0,K-1)
+            clusters[k].append(Instance(x,y))
+            
+            
         return clusters
 
     else:
@@ -276,6 +290,7 @@ def main(args):
     print
     print "Final"
     validation.printMetrics(increment.final)
+    
     
     '''
     print "Other: (%d)" % (other.num_queries)

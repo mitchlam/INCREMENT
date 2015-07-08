@@ -162,10 +162,12 @@ class RecursiveOPTICS(OpticsSubclustering):
     
     #Return of the format Output, subclusters
     #subclusters: [Subcluster][OPTIC POINT]
-    def performOPTICS(self, distance, minPts, display, level = 0):
+    def performOPTICS(self, distance, minPts, display, level = 0, minPtsMin = 3):
         
-        if minPts < 2:
-            minPts = 2
+        #minPts = len(distance)/10
+        
+        if minPts < minPtsMin:
+            minPts = minPtsMin
         
         indent = "\t"*level
         start = len(distance)
@@ -186,7 +188,7 @@ class RecursiveOPTICS(OpticsSubclustering):
         if len(subclusters) == 1:
             #return output, subclusters # Uncomment to recurse a single subclsuter
         
-            if minPts <= 2 or start < 2:
+            if minPts <= minPtsMin or start < 2 or level > 10:
                 if self.verbose:
                     print indent + "{%d} Indivisable" % (level)
                     
@@ -778,7 +780,7 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
 class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
-class MergeINCREMENT(RecursiveOPTICS, CentroidSelector, ClosestPointFeedback, OracleMatching, MergeSubclusters):
+class MergeINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
     pass
 
 class OtherINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
