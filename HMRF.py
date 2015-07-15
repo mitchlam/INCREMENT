@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys
-import utils
+import incUtils as utils
 import random
 import numpy as np
 

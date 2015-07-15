@@ -1,6 +1,6 @@
 
-import utils
-import optics
+import incUtils as utils
+import incOptics as optics
 import HMRF
 
 import random
@@ -18,7 +18,7 @@ import sys
 class BaseINCREMENT(object):
     #Uses naive implementations of everything
 
-    def __init__(self, clustering, distance=utils.EuclideanDistance, symmetric_distance=True, verbose=True, **kwargs):
+    def __init__(self, clustering, distance=utils.EuclideanDistance, as_array=None, symmetric_distance=True, verbose=True, **kwargs):
         self.clustering = clustering
         self.subclusters = []
         self.representatives = [] #actual points, one for each subcluster. Indexes should be aligned with subcluster
@@ -28,6 +28,7 @@ class BaseINCREMENT(object):
 
         self.distance = distance #function to determine distance between instances can be set for custom domains
         self.symmetric_distance = symmetric_distance #Bool stating whether or not the distance is symmetric
+        self.as_array = as_array #Used to convert data to a np array
         
         self.num_queries = 0
         
@@ -774,13 +775,56 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
                 cluster += self.subclusters[x]
             self.final.append(cluster)
         
+class SiameseMerging (MergeSubclusters):
+    
+    def mergeSubclusters(self, **kwargs):
+        feedback = self.mergeFeedback(self.feedback)
+        print "Feedback:", feedback
+        print "Representatives:", self.subclusters
         
+        data = []
+        targets = []
+        
+        print
+        for l,sc in enumerate(feedback):
+            for idx in sc:
+                d = np.array(self.as_array(self.representatives[idx]), dtype=np.float32)
+                data.append(d)
+                targets.append(l)
+    
+        data = np.array(data)
+        targets = np.array(targets)
+        
+        print
+        print "Data:", data.shape
+        print data
+        print "Labels:", targets.shape
+        print targets
+             
+        self.createSiameseNet("_deploy", data, targets)
+        
+        
+        super(SiameseMerging, self).mergeSubclusters(**kwargs)
+
+    def createSiameseNet(self, filename, data, targets):
+        pair_data, sims = utils.generatePairs(data, targets)
+        print
+        
+        data = data[:, np.newaxis, :, np.newaxis]
+        
+        print "Data:", data.shape
+        print "pairs:", pair_data.shape
+        print "sims:", sims.shape
+        
+        print "Creating files for:", filename
+        utils.writeH5(filename, data=data)
+    
 
    
 class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
-class MergeINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
+class MergeINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, SiameseMerging):
     pass
 
 class OtherINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
