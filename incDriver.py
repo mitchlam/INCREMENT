@@ -1,29 +1,5 @@
 #!/usr/bin/python
 
-import sys
-import numpy as np
-import incUtils as utils
-import incValidation as validation
-import time
-import random
-
-import argparse
-
-import INCREMENT
-
-from sklearn.cluster import KMeans
-from sklearn.cluster import DBSCAN
-from sklearn.cluster import SpectralClustering
-
-from sklearn.linear_model import Perceptron
-from sklearn.svm import SVC
-
-from sklearn import datasets
-from sklearn import metrics
-from scipy.spatial import distance as Distance
-
-from sklearn.cross_validation import train_test_split
-
 
 class Instance:
 
@@ -256,7 +232,7 @@ def formatTime(t):
     return result
    
 def runIncrement(args, increment, alg="INCREMENT"): 
-    print "Running %s:" % (alg)
+    #print "Running %s:" % (alg)
     start = time.clock()
     #increment.run(minPts=args.minPts, query_size=args.query_size, times_presented=args.times_presented ,labeler = lambda p: p.label, num_queries=args.num_queries)
     increment.run(labeler = lambda p: p.label, **args)
@@ -295,7 +271,7 @@ def main(args):
     runIncrement(vars(args),increment)
 
     '''
-    other = INCREMENT.OtherINCREMENT(clusters,distance=Instance.distance, aggregator=Instance.aggregate, verbose=args.verbose)
+    other = INCREMENT.MergeINCREMENT(increment.final,distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose)
     runIncrement(vars(args), other, "Other")
     '''
     
@@ -316,8 +292,8 @@ def main(args):
     '''
     print "Other: (%d)" % (other.num_queries)
     
-    print "Subclusters:"
-    validation.printMetrics(other.subclusters)
+    #print "Subclusters:"
+    #validation.printMetrics(other.subclusters)
     print
     validation.printMetrics(other.final)
     '''
@@ -348,6 +324,26 @@ def main(args):
 
     print "Total Time: %s" %(formatTime(time.clock() - starttime))
 
+import os
+import sys
+import time
+import random
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.cluster import DBSCAN
+from sklearn.cluster import SpectralClustering
+
+from sklearn.linear_model import Perceptron
+from sklearn.svm import SVC
+
+from sklearn import datasets
+from sklearn import metrics
+from scipy.spatial import distance as Distance
+
+from sklearn.cross_validation import train_test_split
+
+import argparse
+
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Driver to run INCREMENT.")
@@ -360,14 +356,25 @@ if __name__ == "__main__":
     parser.add_argument( "-k", metavar="Clusters" , help="The number of clusters to use with the initial clustering algorithm (where applicable).", type=int, default=20, dest="K")
     parser.add_argument("-i", "--initial", help="Initial clustering algorithm", type=str, default = "kmeans")
     parser.add_argument("-s", "--supervised", help="Specify whether or not to use a supervised model to form initial clustering.", action="store_true")
-    parser.add_argument("-v", "--verbose", help="Set INCREMENT to print verbosely.", action="store_true")
+    parser.add_argument("-v", "--verbose", help="Set INCREMENT to print verbosely.", type=int, default=2)
     parser.add_argument("-N", "--normalize", help="Normalize Data", action="store_true")
     
     
     args = parser.parse_args()
+    
+    os.environ['GLOG_minloglevel'] = str(args.verbose)
+       
+    import incUtils as utils
+    import incValidation as validation
+    import INCREMENT
+    
     main(args)
     
     #print "Verbose", args.verbose
+
+
+
+
 
 
 

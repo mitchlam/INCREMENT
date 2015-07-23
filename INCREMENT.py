@@ -1,12 +1,21 @@
 
+import os
 import incUtils as utils
 import incOptics as optics
 import HMRF
+import caffe
 
 import random
 import scipy.sparse.csgraph as csgraph
 import numpy as np
+from sklearn.cluster import KMeans
+
 import sys
+
+_VERBOSE_SILENT = 3
+_VERBOSE_DEFAULT = 2
+_VERBOSE_INFO = 1
+_VERBOSE_DEBUG = 0
 
 #class Cluster:
     
@@ -36,28 +45,70 @@ class BaseINCREMENT(object):
 
     def setInstanceDistance(func):
         self.distance = func
-
+        
     def subcluster(self, **kwargs):
-        self.subclusters = self.clustering
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Subclustering:"
+        result = self._subcluster(**kwargs)
+        
+        print "Subclusters Formed:", len(self.subclusters)
+        print
+        
+        return result
 
     def selectRepresentatives(self, **kwargs):
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Selecting Representatives:"
+        result = self._selectRepresentatives(**kwargs)
+        
+        print
+        
+        return result
+        
+    def generateFeedback(self, **kwargs):
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Generating Feedback:"
+        result =  self._generateFeedback(**kwargs)
+        
+        print "Number of Queries:", self.num_queries
+        print
+        
+        return result
+        
+    def query(self, *args, **kwargs):
+        return self._query(*args, **kwargs)
+        
+    def mergeSubclusters(self, **kwargs):
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Merging Subclusters:"
+        
+        result = self._mergeSubclusters(**kwargs)
+        
+        print 
+        
+        return result
+        
+    def _subcluster(self, **kwargs):
+        self.subclusters = self.clustering
+
+    def _selectRepresentatives(self, **kwargs):
         self.representatives = map(lambda x: x[0],self.subclusters)
 
-    def generateFeedback(self, **kwargs):
+    def _generateFeedback(self, **kwargs):
         pass
 
     #Actually presents a set of points to the user, and returns the feedback
     #returns a list of clustered indexes into pts 
-    def query(self, pts, **kwargs):
+    def _query(self, pts, **kwargs):
         self.num_queries += 1
         return [[i] for i in range(len(pts))]
 
-    def mergeSubclusters(self, **kwargs):
+    def _mergeSubclusters(self, **kwargs):
         self.final = self.subclusters
 
     def run(self, **kwargs):
-        if self.verbose:
-            print "Running INCREMENT"
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Running INCREMENT:"
             print
         
         self.subcluster(**kwargs)
@@ -115,7 +166,7 @@ class OpticsSubclustering(BaseINCREMENT):
             
         print indent + "\tAvg: %f -- %f " % (sum(avgs)/len(avgs), np.std(avgs))
         print indent + "\tStd: %f -- %f " % (sum(stds)/len(stds), np.std(stds))
-        print indent + "Subclusters Formed:", len(self.subclusters)
+        #print indent + "Subclusters Formed:", len(self.subclusters)
         print
 
 
@@ -138,16 +189,16 @@ class OpticsSubclustering(BaseINCREMENT):
     
     
     #Performs OPTICS to subcluster the current clustering
-    def subcluster(self, minPts=5, display=False, **kwargs):
+    def _subcluster(self, minPts=5, display=False, **kwargs):
         
         self.subclusters = []
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             print "Computing Distance"
             
         distances = map(lambda x:utils.pairwise(x,self.distance, self.symmetric_distance), self.clustering) #N^2 where N is the number of instances per cluster -- SLOW
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             print "Running OPTICS: minPts = %d" % (minPts)
         
         output, separated = zip(*map(lambda d: self.performOPTICS(d, minPts, display), distances))
@@ -155,8 +206,8 @@ class OpticsSubclustering(BaseINCREMENT):
         self.subclusters = self.mapSeparated(separated)
         
         
-        if self.verbose:
-            self.breakdown(output,separated)
+        if self.verbose <= _VERBOSE_INFO:
+           self.breakdown(output,separated)
 
 
 class RecursiveOPTICS(OpticsSubclustering):
@@ -177,11 +228,11 @@ class RecursiveOPTICS(OpticsSubclustering):
         
         output, subclusters = curried(distance) # Has bug, if there is only a single point, it isnt put in a subcluster
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_DEBUG:
             print indent + "{%d} Begin (%d): %d" % (level, start, minPts)
         
         if len(subclusters) == 0:
-            if self.verbose:
+            if self.verbose <= _VERBOSE_DEBUG:
                 print indent + "{%d} End Single" % (level)
             return output, [output[:]]
         
@@ -190,7 +241,7 @@ class RecursiveOPTICS(OpticsSubclustering):
             #return output, subclusters # Uncomment to recurse a single subclsuter
         
             if minPts <= minPtsMin or start < 2 or level > 10:
-                if self.verbose:
+                if self.verbose <= _VERBOSE_DEBUG:
                     print indent + "{%d} Indivisable" % (level)
                     
                 return output, subclusters
@@ -199,7 +250,7 @@ class RecursiveOPTICS(OpticsSubclustering):
                 #return super(RecursiveOPTICS, self).performOPTICS(distance, minPts/2, display)
                 output, subclusters = self.performOPTICS(distance, minPts/2, display, level + 1)
                 
-                if self.verbose:
+                if self.verbose <= _VERBOSE_DEBUG:
                     print indent + "{%d} End Reduce (%d) : %d" % (level, start, minPts)
                     
                 return output, subclusters
@@ -237,7 +288,7 @@ class RecursiveOPTICS(OpticsSubclustering):
         #translate sep indexes back
         sep = list(sep)
     
-        #if self.verbose:
+        #if self.verbose <= _VERBOSE_INFO:
         #    self.breakdown(out, sep, indent=indent)
         #print "idxs", idxs
     
@@ -260,7 +311,7 @@ class RecursiveOPTICS(OpticsSubclustering):
         
         
 
-        if self.verbose:
+        if self.verbose <= _VERBOSE_DEBUG:
             print indent + "{%d} End (%d)" % (level, end)
         
         if start != end:
@@ -283,7 +334,7 @@ class RecursiveOPTICS(OpticsSubclustering):
 ################################# Representative Selection #################################################
 class MedoidSelector(BaseINCREMENT):
     
-    def selectRepresentatives(self, **kwargs):
+    def _selectRepresentatives(self, **kwargs):
         self.representatives = []
         
         distances = map(lambda sc: utils.pairwise(sc, self.distance, self.symmetric_distance), self.subclusters)
@@ -296,14 +347,27 @@ class MedoidSelector(BaseINCREMENT):
             reps.append(m)
             self.representatives.append(self.subclusters[i][m])
             
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             print "Representatives:"
             print reps
             print
+    
+class RandomSelector(BaseINCREMENT):
+    
+    def selectRepresentattives(self, **kwargs):
+        self.representatives = []
         
+        for sub in self.subclusters:
+            self.representatives.appen(random.choice(sub))
+        
+        if self.verbose <= _VERBOSE_INFO:
+            print "Representatives:"
+            print reps
+            print
+
 class CentroidSelector(CentroidINCREMENT):
     
-    def selectRepresentatives(self, **kwargs):
+    def _selectRepresentatives(self, **kwargs):
         self.representatives = []
         reps = map(self.aggregator, self.subclusters)
         self.representatives = reps
@@ -326,8 +390,8 @@ class AssignmentFeedback(BaseINCREMENT):
         
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, **kwargs):
-        if self.verbose:
+    def _generateFeedback(self, **kwargs):
+        if self.verbose <= _VERBOSE_INFO:
             print "Assignment Query"
         
         labels = {}
@@ -347,7 +411,7 @@ class AssignmentFeedback(BaseINCREMENT):
             
         self.feedback = feedback
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
             print
             print "Number of Assignement Queries: %d" % (self.num_queries)
@@ -356,7 +420,7 @@ class AssignmentFeedback(BaseINCREMENT):
 class MinimumDistanceFeedback(AssignmentFeedback):
     
     #Distances should be the pairwise distances between the representatives
-    def generateFeedback(self, distances, query_size=9, times_presented=1, num_queries=None, **kwargs):
+    def _generateFeedback(self, distances, query_size=9, times_presented=1, num_queries=None, **kwargs):
         
         if times_presented == None:
             times_presented=1
@@ -407,12 +471,136 @@ class MinimumDistanceFeedback(AssignmentFeedback):
     
         self.feedback = feedback
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
             print 
             print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
             print
-
+            
+            
+class FarthestFirstFeedback(AssignmentFeedback):
+    
+    def __init__(self, *args, **kwargs):
+        super(FarthestFirstFeedback, self).__init__(*args, **kwargs)
+        self.overlap=True
+    
+    def singleLink(self, distances, group):
+        dist = []
+        for g in group:
+            dist.append(distances[g])
+        
+        return min(dist)
+    
+    def findMax(self, presented, unpresented, paired_distances):
+        distances = map(lambda p: (self.singleLink(paired_distances[p], presented), p),unpresented)
+        
+        distances.sort(reverse=True)
+        
+        return distances[0][1], distances[0][0][1]
+    
+    def presentQuery(self, pt_idx, **kwargs):
+        pts = map(lambda x: self.representatives[x], pt_idx)
+            
+        response = self.query(pts, **kwargs)
+        return map(lambda c: map(lambda x: pt_idx[x], c), response) #translate pt indexes to the indexes of the representatives
+    
+    
+    def postProcess(self, feedback):
+        return feedback
+    
+    
+    def _generateFeedback(self, query_size=9, num_queries=None, **kwargs):        
+        if(query_size == 1):
+            super(FarthestFirstFeedback, self).generateFeedback(**kwargs)
+            return
+        
+        if (self.verbose <= _VERBOSE_INFO):
+            print
+            print "Farthest First"
+        
+        distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
+        
+        rep_distances = map(lambda d: zip(d, range(len(d))) , distances)
+        
+        feedback = []
+        
+        toPresent = set()
+        presented = set()
+        unpresented = range(len(self.representatives))
+        
+        q = 0
+        
+        while (len(unpresented) > 0 and (num_queries == None) or (q < num_queries)):
+            if len(presented) == 0:
+                pt = random.choice(unpresented)
+                unpresented.remove(pt)
+                
+                toPresent.add(pt)
+                presented.add(pt)
+            else:
+                pt, closest = self.findMax(presented, unpresented, rep_distances)
+                
+                unpresented.remove(pt)
+                presented.add(pt)
+                toPresent.add(pt)
+                if self.overlap and len(toPresent) < query_size:
+                    toPresent.add(closest)
+        
+            if len(toPresent) % query_size == 0:
+                feedback.append(self.presentQuery(list(toPresent), **kwargs))
+                q += 1
+                toPresent = set()
+        
+        if (len(toPresent) > 0 and (num_queries == None) or (q < num_queries)):
+            feedback.append(self.presentQuery(list(toPresent), **kwargs))
+            q += 1
+            toPresent = set()
+        
+        self.num_queries = q
+        self.feedback = self.postProcess(feedback)
+        
+        if self.verbose <= _VERBOSE_INFO:
+            self.printFeedback(feedback)
+            print 
+            print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
+            print
+            
+class FarthestLabelFeedback(FarthestFirstFeedback):
+    
+    def __init__(self, *args, **kwargs):
+        super(FarthestLabelFeedback, self).__init__(*args, **kwargs)
+        self.overlap=False
+        
+    def presentQuery(self, pt_idx, **kwargs):
+        pts = map(lambda x: self.representatives[x], pt_idx)
+            
+        lbls = {}
+        for i,pt in enumerate(pts):
+            response = self.query([pt], **kwargs)
+            if response not in lbls:
+                lbls[response] = []
+            lbls[response].append(pt_idx[i])
+        
+        return lbls
+    
+    def postProcess(self, feedback):
+        lbls = {}
+        
+        for f in feedback:
+            for k,v in f.items():
+                if k not in lbls:
+                    lbls[k] = set()
+                
+                lbls[k].update(v)
+        
+        response = []
+        
+        for k,s in lbls.items():
+            response.append(list(s))
+        
+        return [response]
+    
+    
 class LinkFeedback(AssignmentFeedback):
     
     
@@ -424,7 +612,7 @@ class LinkFeedback(AssignmentFeedback):
         return max(dist)
         
     #Distances should be the pairwise distances between the representatives
-    def generateFeedback(self, distances, query_size=9, times_presented=2, num_queries=None, **kwargs):
+    def _generateFeedback(self, distances, query_size=9, times_presented=2, num_queries=None, **kwargs):
         
         if times_presented == None:
             times_presented = 2
@@ -525,14 +713,14 @@ class LinkFeedback(AssignmentFeedback):
             '''
         self.feedback = feedback
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
             print 
             print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
         
         left = filter(lambda p: presented[p] < times_presented, range(len(presented)))
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             if len(left) != 0:
                 print "Missed Points:", left
             
@@ -543,7 +731,7 @@ class LinkFeedback(AssignmentFeedback):
 
 class RandomMatchingFeedback(AssignmentFeedback):
     
-    def generateFeedback(self, query_size=9, num_queries=15, **kwargs):
+    def _generateFeedback(self, query_size=9, num_queries=15, **kwargs):
         if(query_size == 1):
             super(MatchingFeedback, self).generateFeedback(**kwargs)
             return
@@ -559,7 +747,7 @@ class RandomMatchingFeedback(AssignmentFeedback):
  
         self.feedback = feedback
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
         
             print
@@ -568,7 +756,7 @@ class RandomMatchingFeedback(AssignmentFeedback):
 class ClosestPointFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, **kwargs):    
+    def _generateFeedback(self, **kwargs):    
         distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
         
         super(ClosestPointFeedback,self).generateFeedback(distances, **kwargs)
@@ -578,7 +766,7 @@ class ClosestPointFeedback(MinimumDistanceFeedback):
 class FarthestLinkFeedback(LinkFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, **kwargs):    
+    def _generateFeedback(self, **kwargs):    
         distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
         
         super(FarthestLinkFeedback,self).generateFeedback(distances, **kwargs)    
@@ -587,7 +775,7 @@ class FarthestLinkFeedback(LinkFeedback):
 class MinimumSpanningTreeFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, **kwargs):
+    def _generateFeedback(self, **kwargs):
         distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
         
         mst = csgraph.minimum_spanning_tree(distances)
@@ -599,7 +787,7 @@ class MinimumSpanningTreeFeedback(MinimumDistanceFeedback):
 class DistanceFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
-    def generateFeedback(self, **kwargs):
+    def _generateFeedback(self, **kwargs):
         distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
 
         distances = csgraph.shortest_path(distances,method="D", directed=self.symmetric_distance)
@@ -613,7 +801,7 @@ class OracleMatching(BaseINCREMENT):
     
     #Cheats and looks at target. Simulates a perfect user.
     #labeler is a function that accepts an instance and returns its label
-    def query(self, pts,  labeler=None, **kwargs):
+    def _query(self, pts,  labeler=None, **kwargs):
         
         #if no labeling function is provided, default to parent implementation
         if labeler == None:
@@ -694,7 +882,7 @@ class MergeSubclusters(BaseINCREMENT):
             
         return feedback
     
-    def mergeSubclusters(self, **kwargs):
+    def _mergeSubclusters(self, **kwargs):
         self.final = []
         
         feedback = self.mergeFeedback(self.feedback)
@@ -712,7 +900,7 @@ class MergeSubclusters(BaseINCREMENT):
             if i not in flattened:
                 self.final.append(self.subclusters[i])
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             print "Merged Feedback:"
             for i, f in enumerate(sorted(map(sorted,feedback))):
                 print "\t", i, ":", f
@@ -720,7 +908,7 @@ class MergeSubclusters(BaseINCREMENT):
 
 class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
     
-    def mergeSubclusters(self, **kwargs):
+    def _mergeSubclusters(self, **kwargs):
         M = []
         C = []
         
@@ -753,7 +941,7 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
         #print
         feedback = self.mergeFeedback(self.feedback)
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             print "Merged Feedback:"
             print "\t", sorted(map(sorted,feedback))
             print 
@@ -762,7 +950,7 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
         
         clusters = hmrf.cluster(self.representatives,M,C, feedback)
         
-        if self.verbose:
+        if self.verbose <= _VERBOSE_INFO:
             print
             print "Clustered Representatives:", sorted(map(sorted,clusters))
             print
@@ -777,54 +965,258 @@ class HRMFMerge(CentroidINCREMENT,MergeSubclusters):
         
 class SiameseMerging (MergeSubclusters):
     
-    def mergeSubclusters(self, **kwargs):
-        feedback = self.mergeFeedback(self.feedback)
-        print "Feedback:", feedback
-        print "Representatives:", self.subclusters
+    def __init__(self, *args, **kwargs):
+        super(SiameseMerging, self).__init__(*args, **kwargs)
+        self.batch_size = 10
+        self.output_size = 100
+    
+    def findConstraints(self, merged):
+        feedback = self.feedback
+    
+        cannotLink = []
         
-        data = []
-        targets = []
+        for sc in merged:
+            c = set()
+            for rep in sc:
+                for query in feedback:
+                    tmp = set()
+                    found = False
+                    for group in query:
+                        if rep not in group:
+                            tmp.update(group)
+                        else:
+                            found = True
+                    
+                           
+                    '''
+                    print "Point:", rep
+                    print "Found:", found
+                    print "Query:", query
+                    print "Tmp:", tmp
+                    print
+                    '''
+                    if found:
+                        c.update(tmp)
+            
+            cannotLink.append(c)
+    
+        constraints = []
+        for constr in cannotLink:
+            tmp = set()
+            for pt in constr:
+                for c,sc in enumerate(merged):
+                    if pt in sc:
+                        tmp.add(c)
+                        break
+            constraints.append(tmp)
         
-        print
+        if self.verbose <= _VERBOSE_INFO:
+            print "Merged Feedback:"
+            print "\t", merged, len(merged)
+            print
+            
+            print "Connot Link Subcluster Constraints:"
+            print "\t", constraints, len(constraints)
+        
+        return constraints
+        
+    def getTrainData(self, feedback, **kwargs):
+        train_data = []
+        labels = []
+        
         for l,sc in enumerate(feedback):
             for idx in sc:
                 d = np.array(self.as_array(self.representatives[idx]), dtype=np.float32)
-                data.append(d)
-                targets.append(l)
+                train_data.append(d)
+                labels.append(l)
     
+        return np.array(train_data), np.array(labels), self.findConstraints(feedback)
+    
+    def getData(self, **kwargs):
+        data = []
+        targets = []
+        lookUp = []
+        for i,r in enumerate(self.representatives):
+            d = np.array(self.as_array(r), dtype=np.float32)
+            if('labeler' in kwargs):
+                t = kwargs['labeler'](r)
+                #print t
+                targets.append(t)
+                
+            data.append(d)
+            lookUp.append(self.subclusters[i])
+            
         data = np.array(data)
-        targets = np.array(targets)
+        targets = np.array(utils.enumeratation(targets))
         
-        print
-        print "Data:", data.shape
-        print data
-        print "Labels:", targets.shape
-        print targets
-             
-        self.createSiameseNet("_deploy", data, targets)
+        return data, targets, lookUp
+    
+    
+    def _mergeSubclusters(self, **kwargs):
+        feedback = self.mergeFeedback(self.feedback)
+        K = len(feedback)
         
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Generating Data"
+        train_data, labels, constraints = self.getTrainData(feedback, **kwargs)
+        data, targets, reverseIndex = self.getData(**kwargs)
         
-        super(SiameseMerging, self).mergeSubclusters(**kwargs)
+            
+        net = self.siameseNet("_train", "_deploy", train_data, labels, constraints, data)
+        
+        data = data[:,np.newaxis,:,np.newaxis] 
+        train_data = train_data[:,np.newaxis,:,np.newaxis]
+        
+        feat = np.copy(net.forward()['feat'])
+        #train_feat = np.copy(utils.feedData(net, train_data)['feat'])
+        
+        if self.verbose <= _VERBOSE_INFO:
+            print "data", data.shape
+            print "targets:", targets.shape
+        
+            print "K:", K
+        
+        #super(SiameseMerging, self).mergeSubclusters(**kwargs)
+        
 
-    def createSiameseNet(self, filename, data, targets):
-        pair_data, sims = utils.generatePairs(data, targets)
-        print
+        #print "Feat:", feat.shape
+        #print feat
+        
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Reclustering"
+            
+        kmeans = KMeans(n_clusters=K, precompute_distances=True, n_jobs=-1)
+        
+        kmeans.fit(feat)
+        lbls = kmeans.labels_
+        
+        k = len(set(lbls))
+    
+        clusters = []
+        
+        for i in range(k):
+            clusters.append([])
+            
+        for i,x in enumerate(feat):
+            l = lbls[i]
+            clusters[l] += reverseIndex[i]
+        
+        self.final = clusters
+        
+        if self.verbose <= _VERBOSE_INFO and self.output_size <= 3:
+            utils.clearPlots()
+            #utils.displayPlot(train_feat, labels, title="Train Data", block=False)
+            utils.displayPlot(feat, lbls, title="Final Clustering", block=False)
+            utils.displayPlot(feat, targets, title="Targets")
+        
+
+    def siameseNet(self, trainName, deployName, train_data, labels, constraints, data):
+        batch_size = self.batch_size
+        outSize = self.output_size
+            
+        
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Creating Pairs"
+            
+        pair_data, sims = self.createPairs(train_data, labels, constraints, batch_size)
         
         data = data[:, np.newaxis, :, np.newaxis]
         
-        print "Data:", data.shape
-        print "pairs:", pair_data.shape
-        print "sims:", sims.shape
+        if self.verbose <= _VERBOSE_INFO:
+            print "Train_data:", train_data.shape
+            print "Data:", data.shape
+            print "pairs:", pair_data.shape
+            print "sims:", sims.shape
         
-        print "Creating files for:", filename
-        utils.writeH5(filename, data=data)
+        if self.verbose <= _VERBOSE_INFO:
+            print "Creating files for:", trainName
+        
+        utils.writeH5(trainName, pair_data=pair_data, sims=sims)
+        
+        if self.verbose <= _VERBOSE_INFO:
+            print "Creating files for:", deployName
+            
+        utils.writeH5(deployName, data=data)
+        
+        TRAIN_MODEL = "_TRAIN_NET.prototxt"
+        DEPLOY_MODEL = "_DEPLOY_NET.prototxt"
+        SOLVER_FILE = "solver.prototxt"
+        
+        size = data.shape[2]
+        
+        #Write training model prototxt
+        with open(TRAIN_MODEL, "w") as f:
+            f.write('name: "train"\n')
+            f.write(str(utils.createTrainSiamese(source = trainName + ".txt", batch_size=batch_size, vector_size = size, output_size=outSize)))
     
+        with open(DEPLOY_MODEL, "w") as f:
+            f.write('name: "deploy"\n')
+            f.write(str(utils.createDeploySiamese(source = deployName + ".txt", batch_size=data.shape[0], output_size=outSize))) # leave batch_size =1 here. Causes weird errors otherwise
 
-   
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Training siamese network"
+            
+        solver = caffe.SGDSolver(SOLVER_FILE)
+        #solver.net.set_input_arrays(pair_data,sims)
+        solver.solve()
+        
+        net = caffe.Net(DEPLOY_MODEL, "_iter_" + str(solver.iter) + ".caffemodel", caffe.TEST)
+        
+        return net
+
+    def createPairs(self, data, targets, constraints, batch_size):
+        return utils.generatePairs(data, targets, constraints, batch_size=batch_size)
+
+class SiameseTrainAll(SiameseMerging):
+    
+    def getTrainData(self,feedback, **kwargs):
+        train_data = []
+        labels = [] 
+        
+        for l,sc in enumerate(feedback):
+            for idx in sc:
+                for pt in self.subclusters[idx]:
+                    d = np.array(self.as_array(pt), dtype=np.float32)
+                    train_data.append(d)
+                    labels.append(l)
+    
+        return np.array(train_data), np.array(labels), self.findConstraints(feedback)
+    
+    
+    def createPairs(self, data, targets, constraints, batch_size, num_pairs=500000):
+        n = data.shape[0]
+        
+        if n*(n-1)/2 > num_pairs:
+            return utils.generateRandomPairs(data, targets, num_pairs, constraints, batch_size=batch_size)
+        
+        return utils.generatePairs(data, targets, constraints, batch_size=batch_size)
+         
+class SiameseTestAll(SiameseMerging):
+    
+    def getData(self, **kwargs):
+        data = []
+        targets = [] 
+        lookUp = []
+        
+        for sc in self.subclusters:
+            for pt in sc:
+                d = np.array(self.as_array(pt), dtype=np.float32)
+                data.append(d)
+                if('labeler' in kwargs):
+                    t = kwargs['labeler'](pt)
+                    #print t
+                    targets.append(t)
+                lookUp.append([pt])
+    
+        return np.array(data), np.array(utils.enumeratation(targets)), lookUp
+    
+class Siamese(SiameseTrainAll, SiameseTestAll):
+    pass
+
 class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
-class MergeINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, SiameseMerging):
+class MergeINCREMENT(RecursiveOPTICS, MedoidSelector, FarthestLabelFeedback, OracleMatching, Siamese):
     pass
 
 class OtherINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):
