@@ -173,7 +173,7 @@ def jaccard(clustering):
     return float(ss) / float(ss + sd + ds)
 
 
-def printMetrics(cluster):
+def printMetrics(cluster, printMat=True):
 	
 	#clustering = sorted(cluster, key=lambda x: len(x), reverse=True)
 	cont = contingency(cluster)
@@ -181,7 +181,8 @@ def printMetrics(cluster):
 	print "Accuracy: %d of %d: %.3f %%" % (checkAccuracy(cont))
         print "H: %f C: %f V: %f" % (All_measures(cont)) + " JCC: %f" % (jaccard(cluster))
 
-	utils.print_cont(cont)
+	if printMat:
+		utils.print_cont(cont)
 	
 	print
 	

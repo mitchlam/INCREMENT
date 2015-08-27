@@ -129,6 +129,7 @@ def generateRandomPairs(data,labels, num_pairs, constraints, batch_size=1):
 def generatePairs(data,labels, constraints, batch_size=1):
 	pairs = []
 	sims = []
+	
 	for i,x in enumerate(data):
 		for j,y in enumerate(data):
 			if j <= i:
@@ -137,8 +138,6 @@ def generatePairs(data,labels, constraints, batch_size=1):
 			p = np.zeros((2,x.shape[0]), dtype= np.float32)
 			p[0] = x[:]
 			p[1] = y[:]
-			
-			
 			
 			s = None
 			
@@ -150,8 +149,7 @@ def generatePairs(data,labels, constraints, batch_size=1):
 			if s != None:
 				pairs.append(p)
 				sims.append(s)
-
-	#print "Filling Pairs"	
+	
 	while len(pairs)%batch_size != 0:
 		i = random.randint(0, len(data) - 1)
 		j = random.randint(0, len(data) - 1)
@@ -169,7 +167,6 @@ def generatePairs(data,labels, constraints, batch_size=1):
 		
 		#print "%d %% %d = %d" % (len(pairs), batch_size, len(pairs)%batch_size)
 		
-	#print "Pairs Filled"
 	comb = zip(pairs, sims)
 	random.shuffle(comb)
 	pairs[:], sims[:] = zip(*comb)
@@ -278,22 +275,22 @@ def addMainLeg(n, output_size):
 	n.ip1 = L.InnerProduct(n.data, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 , weight_filler=dict(type='xavier'),  bias_filler=dict(type='gaussian', std=0.1))
 	n.s1 = L.Sigmoid(n.ip1, in_place=True)
 	
-	n.ip2 = L.InnerProduct(n.ip1, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'),  bias_filler=dict(type='constant'))
+	n.ip2 = L.InnerProduct(n.ip1, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'),  bias_filler=dict(type='constant'))
 	n.s2 = L.Sigmoid(n.ip2, in_place=True)
 	'''
-	n.ip3 = L.InnerProduct(n.ip2, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=10 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
+	n.ip3 = L.InnerProduct(n.ip2, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s3 = L.Sigmoid(n.ip3, in_place=True)
-	'''	
+	'''
 	n.feat = L.InnerProduct(n.ip2, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
 	
 def addPairedLeg(n, output_size):
 	n.ip1_p = L.InnerProduct(n.data_p, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='gaussian', std=0.1))
 	n.s1_p = L.Sigmoid(n.ip1_p, in_place=True)
 	
-	n.ip2_p = L.InnerProduct(n.ip1_p, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
+	n.ip2_p = L.InnerProduct(n.ip1_p, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s2_p = L.Sigmoid(n.ip2_p, in_place=True)
 	'''
-	n.ip3_p = L.InnerProduct(n.ip2_p, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=10 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
+	n.ip3_p = L.InnerProduct(n.ip2_p, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s3_p = L.Sigmoid(n.ip3_p, in_place=True)
 	'''
 	n.feat_p = L.InnerProduct(n.ip2_p, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))

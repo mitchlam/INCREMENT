@@ -485,18 +485,20 @@ class FarthestFirstFeedback(AssignmentFeedback):
         self.overlap=True
     
     def singleLink(self, distances, group):
-        dist = []
+        minimum = None
         for g in group:
-            dist.append(distances[g])
+            v = distances[g]
+            if minimum == None or v < minimum:
+                minimum = v
         
-        return min(dist)
+        return minimum
     
     def findMax(self, presented, unpresented, paired_distances):
         distances = map(lambda p: (self.singleLink(paired_distances[p], presented), p),unpresented)
         
-        distances.sort(reverse=True)
+        m = max(distances)
         
-        return distances[0][1], distances[0][0][1]
+        return m[1], m[0][1]
     
     def presentQuery(self, pt_idx, **kwargs):
         pts = map(lambda x: self.representatives[x], pt_idx)
@@ -515,9 +517,11 @@ class FarthestFirstFeedback(AssignmentFeedback):
             return
         
         if (self.verbose <= _VERBOSE_INFO):
-            print
             print "Farthest First"
         
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Computing pairwise distances between representatives."
+            
         distances = utils.pairwise(self.representatives, self.distance, self.symmetric_distance)
         
         rep_distances = map(lambda d: zip(d, range(len(d))) , distances)
@@ -530,6 +534,9 @@ class FarthestFirstFeedback(AssignmentFeedback):
         
         q = 0
         
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Beginning Queries"
+            
         while (len(unpresented) > 0 and (num_queries == None) or (q < num_queries)):
             if len(presented) == 0:
                 pt = random.choice(unpresented)
@@ -549,6 +556,8 @@ class FarthestFirstFeedback(AssignmentFeedback):
             if len(toPresent) % query_size == 0:
                 feedback.append(self.presentQuery(list(toPresent), **kwargs))
                 q += 1
+                if self.verbose <= _VERBOSE_DEBUG:
+                    print "Queried", q
                 toPresent = set()
         
         if (len(toPresent) > 0 and (num_queries == None) or (q < num_queries)):
@@ -967,7 +976,7 @@ class SiameseMerging (MergeSubclusters):
     
     def __init__(self, *args, **kwargs):
         super(SiameseMerging, self).__init__(*args, **kwargs)
-        self.batch_size = 10
+        self.batch_size = 100
         self.output_size = 100
     
     def findConstraints(self, merged):
@@ -1127,6 +1136,7 @@ class SiameseMerging (MergeSubclusters):
             print "Data:", data.shape
             print "pairs:", pair_data.shape
             print "sims:", sims.shape
+            
         
         if self.verbose <= _VERBOSE_INFO:
             print "Creating files for:", trainName
@@ -1183,7 +1193,7 @@ class SiameseTrainAll(SiameseMerging):
         return np.array(train_data), np.array(labels), self.findConstraints(feedback)
     
     
-    def createPairs(self, data, targets, constraints, batch_size, num_pairs=500000):
+    def createPairs(self, data, targets, constraints, batch_size, num_pairs=100000):
         n = data.shape[0]
         
         if n*(n-1)/2 > num_pairs:

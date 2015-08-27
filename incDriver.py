@@ -233,22 +233,22 @@ def formatTime(t):
    
 def runIncrement(args, increment, alg="INCREMENT"): 
     #print "Running %s:" % (alg)
-    start = time.clock()
+    start = time.time()
     #increment.run(minPts=args.minPts, query_size=args.query_size, times_presented=args.times_presented ,labeler = lambda p: p.label, num_queries=args.num_queries)
     increment.run(labeler = lambda p: p.label, **args)
-    end = time.clock()
+    end = time.time()
     #print "%s: (%d)  --  (%s)" % (alg,increment.num_queries,formatTime(start-end))
     #validation.printMetrics(increment.final)
     
 def main(args):
 
-    starttime = time.clock()
+    starttime = time.time()
     lasttime = starttime
     
     X,Y = getData(args.dataset)
     
-    print "Using: %s (%d)  --  (%s)" % (args.dataset, len(X), formatTime(time.clock() - lasttime))
-    lasttime = time.clock()
+    print "Using: %s (%d)  --  (%s)" % (args.dataset, len(X), formatTime(time.time() - lasttime))
+    lasttime = time.time()
     
     clusters = []
     
@@ -262,8 +262,8 @@ def main(args):
         clusters = cluster_data(X,Y, args)
         
 
-    print "Initial:  --  (%s)" % (formatTime(time.clock() - lasttime))
-    lasttime  = time.clock()
+    print "Initial:  --  (%s)" % (formatTime(time.time() - lasttime))
+    lasttime  = time.time()
 
     validation.printMetrics(clusters)
 
@@ -281,8 +281,8 @@ def main(args):
     '''
     
     print "INCREMENT: (%d)" % (increment.num_queries)
-    #print "SubClusters"
-    #validation.printMetrics(increment.subclusters)
+    print "SubClusters Only:"
+    validation.printMetrics(increment.subclusters, printMat=False)
     
     print
     print "Final"
@@ -322,7 +322,7 @@ def main(args):
     #except:
     pass
 
-    print "Total Time: %s" %(formatTime(time.clock() - starttime))
+    print "Total Time: %s" %(formatTime(time.time() - starttime))
 
 import os
 import sys

@@ -1,5 +1,7 @@
 *.swp
 *.pyc
+data
+stdout/*
 data/*
 output/*
 profile/*
