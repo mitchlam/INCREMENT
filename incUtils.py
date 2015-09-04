@@ -2,12 +2,14 @@ import string
 import os
 import sys
 
+import lmdb
 import h5py
 import random
 import numpy as np
 
 import caffe
 from caffe import layers as L
+from caffe import params as P
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -123,7 +125,7 @@ def generateRandomPairs(data,labels, num_pairs, constraints, batch_size=1):
 		
 	#print "Pairs Filled"
 	
-	return np.array(pairs)[:,:,:,np.newaxis], np.array(sims, dtype=np.float32)
+	return np.array(pairs), np.array(sims, dtype=np.float32)
 	#return np.ascontiguousarray(np.array(pairs)[:,:,:,np.newaxis]), np.ascontiguousarray(sims, dtype=np.float32)
 	
 def generatePairs(data,labels, constraints, batch_size=1):
@@ -166,12 +168,12 @@ def generatePairs(data,labels, constraints, batch_size=1):
 		sims.append(s)
 		
 		#print "%d %% %d = %d" % (len(pairs), batch_size, len(pairs)%batch_size)
-		
+	'''	
 	comb = zip(pairs, sims)
 	random.shuffle(comb)
 	pairs[:], sims[:] = zip(*comb)
-	
-	return np.array(pairs)[:,:,:,np.newaxis], np.array(sims, dtype=np.float32)
+	'''
+	return np.array(pairs), np.array(sims, dtype=np.float32)
 	#return np.ascontiguousarray(np.array(pairs)[:,:,:,np.newaxis]), np.ascontiguousarray(sims, dtype=np.float32)
 
 def clearPlots():
@@ -212,13 +214,64 @@ def displayPlot(feat, labels, title = None, block=True):
 	
 		plt.show(block=block)
 
-def writeH5(name, **kwargs):
-    with h5py.File(name+".h5", "w") as f:
-        for key,value in kwargs.items():
-            f[key] = value
 
-    with open(name+".txt", "w") as f:
-        f.write(name+".h5")
+def writeLMDB(name, data, labels = None, map_size=2147483647, debug=False):
+	env = lmdb.open(name, map_size=map_size, writemap= True, map_async=True, meminit=False, metasync=False)
+	
+	if labels != None:
+		datum = map(lambda d,l : caffe.io.array_to_datum(d.astype(float), int(l)).SerializeToString(), data, labels)
+	else:
+		datum = map(lambda d: caffe.io.array_to_datum(d.astype(float)).SerializeToString(),data)
+	
+	print "Writing datum"
+	for i in xrange(len(datum)):
+		'''
+		datum = caffe.proto.caffe_pb2.Datum()
+		datum.channels = data.shape[1]
+		datum.height = data.shape[2]
+		datum.width = data.shape[3]
+		datum.data = bytes(data[i])
+		'''
+		'''
+		datum = caffe.io.array_to_datum(data[i].astype(float))
+	
+		if (labels != None):
+			datum.label = int(labels[i])
+		'''
+		
+		str_id = '{:08}'.format(i)
+	
+		with env.begin(write=True) as txn:
+			err = txn.put(str_id.encode('ascii'), datum[i])
+		
+			if not err:
+				print "Could not add", i, "to", name
+	
+MAX_INT = 2147483647
+def writeH5(name, **kwargs):
+	
+	split_size = MAX_INT
+	for key, value in kwargs.items():
+		size = MAX_INT
+		length = value.shape[0] #assuming the same number of instances
+		for l in reversed(value.shape[1:]):
+			size /= l
+		if size < split_size:
+			split_size = size
+			
+	#print "Size per split", split_size
+	
+	with open(name+".txt", "w") as txt:
+		numFiles = 0
+		for i in range(0, length, split_size):
+			numFiles += 1
+			filename = name + "_" + str(numFiles) + ".h5"
+			txt.write(filename + "\n")
+			with h5py.File(filename, "w") as f:
+				for key,value in kwargs.items():
+					#print "Shape of H5 Value:", value.shape
+					f[key] = value[i:i+split_size]
+		print "Files created:", numFiles
 
 
 def enumeratation(targets):
@@ -242,10 +295,11 @@ def feedData(net, data):
 	return net.forward()
 
 
-def createTrainSiamese(source, batch_size, vector_size, output_size=10):
+def createTrainSiamese(source, batch_size, output_size=10):
 	n = caffe.NetSpec()
 	
-	n.pair_data, n.sims = L.HDF5Data(source= source, batch_size=batch_size, ntop=2)
+	n.pair_data, n.sims = L.HDF5Data(source=source, batch_size=batch_size, shuffle=True, ntop=2)
+	#n.pair_data, n.sims = L.Data(source = source, backend=P.Data.LMDB, batch_size=batch_size, ntop=2)
 	#n.pair_data, n.sims = L.MemoryData(batch_size=batch_size, channels=2, height=vector_size, width=1, ntop=2)
 	
 	n.data, n.data_p = L.Slice(n.pair_data, axis=1, ntop=2)
@@ -262,13 +316,14 @@ def createTrainSiamese(source, batch_size, vector_size, output_size=10):
 	return n.to_proto()
 
 def createDeploySiamese(source, batch_size, output_size=10):
-    n = caffe.NetSpec()
-
-    n.data = L.HDF5Data(batch_size=batch_size, source=source)
-
-    addMainLeg(n, output_size)
-
-    return n.to_proto()
+	n = caffe.NetSpec()
+	
+	n.data = L.HDF5Data(batch_size=batch_size, source=source)
+	#n.data = L.Data(backend=P.Data.LMDB, batch_size=batch_size, source=source)
+	
+	addMainLeg(n, output_size)
+	
+	return n.to_proto()
 
 
 def addMainLeg(n, output_size):

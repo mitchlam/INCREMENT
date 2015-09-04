@@ -281,7 +281,7 @@ def main(args):
     '''
     
     print "INCREMENT: (%d)" % (increment.num_queries)
-    print "SubClusters Only:"
+    print "SubClusters:", len(increment.subclusters)
     validation.printMetrics(increment.subclusters, printMat=False)
     
     print

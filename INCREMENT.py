@@ -11,6 +11,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 import sys
+import gc
 
 _VERBOSE_SILENT = 3
 _VERBOSE_DEFAULT = 2
@@ -976,7 +977,7 @@ class SiameseMerging (MergeSubclusters):
     
     def __init__(self, *args, **kwargs):
         super(SiameseMerging, self).__init__(*args, **kwargs)
-        self.batch_size = 100
+        self.batch_size = 10
         self.output_size = 100
     
     def findConstraints(self, merged):
@@ -1070,11 +1071,12 @@ class SiameseMerging (MergeSubclusters):
         train_data, labels, constraints = self.getTrainData(feedback, **kwargs)
         data, targets, reverseIndex = self.getData(**kwargs)
         
+        #data = data[:,np.newaxis,:] 
+        
             
         net = self.siameseNet("_train", "_deploy", train_data, labels, constraints, data)
         
-        data = data[:,np.newaxis,:,np.newaxis] 
-        train_data = train_data[:,np.newaxis,:,np.newaxis]
+        #train_data = train_data[:,np.newaxis,:,np.newaxis]
         
         feat = np.copy(net.forward()['feat'])
         #train_feat = np.copy(utils.feedData(net, train_data)['feat'])
@@ -1084,9 +1086,6 @@ class SiameseMerging (MergeSubclusters):
             print "targets:", targets.shape
         
             print "K:", K
-        
-        #super(SiameseMerging, self).mergeSubclusters(**kwargs)
-        
 
         #print "Feat:", feat.shape
         #print feat
@@ -1122,14 +1121,19 @@ class SiameseMerging (MergeSubclusters):
     def siameseNet(self, trainName, deployName, train_data, labels, constraints, data):
         batch_size = self.batch_size
         outSize = self.output_size
-            
+         
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Creating files for:", deployName
+             
+        utils.writeH5(deployName, data=data)
+        #utils.writeLMDB(deployName, data)
         
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Creating Pairs"
             
         pair_data, sims = self.createPairs(train_data, labels, constraints, batch_size)
         
-        data = data[:, np.newaxis, :, np.newaxis]
+        
         
         if self.verbose <= _VERBOSE_INFO:
             print "Train_data:", train_data.shape
@@ -1138,30 +1142,28 @@ class SiameseMerging (MergeSubclusters):
             print "sims:", sims.shape
             
         
-        if self.verbose <= _VERBOSE_INFO:
+        if self.verbose <= _VERBOSE_DEFAULT:
             print "Creating files for:", trainName
         
         utils.writeH5(trainName, pair_data=pair_data, sims=sims)
+        #utils.writeLMDB(trainName, pair_data, sims)
         
-        if self.verbose <= _VERBOSE_INFO:
-            print "Creating files for:", deployName
-            
-        utils.writeH5(deployName, data=data)
+        #Clean Up Memory
+        del pair_data, sims
+        gc.collect()
         
         TRAIN_MODEL = "_TRAIN_NET.prototxt"
         DEPLOY_MODEL = "_DEPLOY_NET.prototxt"
         SOLVER_FILE = "solver.prototxt"
         
-        size = data.shape[2]
-        
         #Write training model prototxt
         with open(TRAIN_MODEL, "w") as f:
             f.write('name: "train"\n')
-            f.write(str(utils.createTrainSiamese(source = trainName + ".txt", batch_size=batch_size, vector_size = size, output_size=outSize)))
+            f.write(str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize)))
     
         with open(DEPLOY_MODEL, "w") as f:
             f.write('name: "deploy"\n')
-            f.write(str(utils.createDeploySiamese(source = deployName + ".txt", batch_size=data.shape[0], output_size=outSize))) # leave batch_size =1 here. Causes weird errors otherwise
+            f.write(str(utils.createDeploySiamese(source = deployName +".txt", batch_size=data.shape[0], output_size=outSize))) # leave batch_size =1 here. Causes weird errors otherwise
 
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Training siamese network"
@@ -1193,7 +1195,7 @@ class SiameseTrainAll(SiameseMerging):
         return np.array(train_data), np.array(labels), self.findConstraints(feedback)
     
     
-    def createPairs(self, data, targets, constraints, batch_size, num_pairs=100000):
+    def createPairs(self, data, targets, constraints, batch_size, num_pairs=500000):
         n = data.shape[0]
         
         if n*(n-1)/2 > num_pairs:
