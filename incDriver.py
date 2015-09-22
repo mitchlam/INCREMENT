@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 class Instance:
 
     def __init__(self, data, label=None):
@@ -12,9 +11,9 @@ class Instance:
         
     @staticmethod
     def distance(x,y):
-        #return np.linalg.norm(x.data-y.data, ord = 1)
+        return np.linalg.norm(x.data-y.data)
         #return Distance.euclidean(x.data,y.data)
-        return Distance.cityblock(x.data,y.data)
+        #return Distance.cityblock(x.data,y.data)
     
     @staticmethod
     def as_array(x):
@@ -38,20 +37,26 @@ class Instance:
         return I
 
 
-def classify_data(X,Y, args, holdout = 0.8):
+def classify_data(X,Y, args, holdout = 0.5):
     X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size=holdout, random_state=np.random.RandomState())
+    
+    train_data = np.array(map(lambda x: x.flatten(), X_train))
+    test_data = np.array(map(lambda x: x.flatten(), X_test))
+    
     
     model = None
     if (args.initial == "perceptron"):
         model = Perceptron()
     elif(args.initial == "svm"):
         model = SVC(kernel="poly")
+    elif (args.initial == "GMM"):
+        model = GMM(n_components=args.K)
     else:
         raise("Model Not Supported.")
     
-    model.fit(X_train, Y_train)
+    model.fit(train_data, Y_train)
     
-    Y_pred = model.predict(X_test)
+    Y_pred = model.predict(test_data)
     
     labels = set(Y_pred)
     
@@ -73,13 +78,19 @@ def classify_data(X,Y, args, holdout = 0.8):
 def cluster_data(X,Y, args):
     
     alg = None
-    
+    data = np.array(map(lambda x: x.flatten(), X))
+     
     if (args.initial == "dbscan"):
         alg = DBSCAN()
     elif (args.initial == "spectral"):
         alg = SpectralClustering(n_clusters=args.K, affinity="nearest_neighbors")
     elif (args.initial == "kmeans"):
         alg = KMeans(n_clusters=args.K, precompute_distances=True, n_jobs=-1)
+    elif (args.initial == "mean-shift"):
+        bandwidth = estimate_bandwidth(data, quantile=0.2, n_samples = 500)
+        alg = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    elif (args.initial == "complete" or args.initial == "average" or args.initial == "ward"):
+        alg = AgglomerativeClustering(n_clusters = args.K, linkage=args.initial)
     elif (args.initial == "active"):
         clusters = []
 
@@ -128,8 +139,9 @@ def cluster_data(X,Y, args):
         return clusters.values()
     else:
         raise("Model Not Supported.")
-        
-    alg.fit(X)
+    
+   
+    alg.fit(data)
     
     labels = alg.labels_
     
@@ -155,7 +167,7 @@ def getDigit():
     
     return digits['data'], digits['target']
 
-def loadCSV(filename):
+def loadCSV(filename, image=False):
     
     f = open(filename, "r")
 
@@ -170,14 +182,19 @@ def loadCSV(filename):
         l = [i.strip() for i in line.split(",")]
 
         try:
-            data.append(map(lambda x: float(x), l[:-1]))
+            if image:
+                data.append(loadImage(l[0]))
+            else:
+                data.append(map(lambda x: float(x), l[:-1]))
+                
         except ValueError as e:
             print e
             print l
             print "Line: %d" % (num)
             sys.exit()
-        except:
-            pass
+        except Exception as e:
+            print e
+            continue
 
         lbl = l[-1]
         
@@ -194,15 +211,22 @@ def loadCSV(filename):
     
     return np.array(data),np.array(targets)
 
-def getData(f):
+def loadImage(filename):
+    #print "Loading images:", filename
+    transformer = caffe.io.Transformer({'data':(1,1, 64, 64)})
+    transformer.set_transpose('data', (2,0,1))
+    im =  transformer.preprocess("data", caffe.io.load_image(filename, color=False))
+    return im
+
+
+def getData(f, image=False):
     if( f == "iris"):
         return getIris()
     
     if (f == "digit"):
         return getDigit()
     
-    
-    return loadCSV(f)
+    return loadCSV(f, image)
 
 def formatTime(t):
 
@@ -240,12 +264,39 @@ def runIncrement(args, increment, alg="INCREMENT"):
     #print "%s: (%d)  --  (%s)" % (alg,increment.num_queries,formatTime(start-end))
     #validation.printMetrics(increment.final)
     
+def testIncrement(args, increment, alg="INCREMENT"): 
+
+    print "Testing INCREMENT"
+    
+    
+    start = time.time()
+    #increment.run(labeler = lambda p: p.label, **args)
+    
+    increment.subcluster(labeler = lambda p: p.label, **args)
+    increment.selectRepresentatives(labeler = lambda p: p.label, **args)
+    
+    for i in range(1,len(increment.subclusters)):
+        args["num_queries"] = i
+        increment.generateFeedback(labeler = lambda p: p.label, **args)
+        increment.mergeSubclusters(labeler = lambda p: p.label, **args)
+        
+        increment.verbose = 3
+        
+        print "~!", i, "!~"
+        validation.printMetrics(increment.final, printMat=False)
+        print
+        
+        
+    
+    end = time.time()
+
+    
 def main(args):
 
     starttime = time.time()
     lasttime = starttime
     
-    X,Y = getData(args.dataset)
+    X,Y = getData(args.dataset, args.image)
     
     print "Using: %s (%d)  --  (%s)" % (args.dataset, len(X), formatTime(time.time() - lasttime))
     lasttime = time.time()
@@ -267,8 +318,11 @@ def main(args):
 
     validation.printMetrics(clusters)
 
-    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose)
-    runIncrement(vars(args),increment)
+    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose, convolution=args.convolution)
+    if not args.test:
+        runIncrement(vars(args),increment)
+    else:
+        testIncrement(vars(args), increment)
 
     '''
     other = INCREMENT.MergeINCREMENT(increment.final,distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose)
@@ -332,6 +386,9 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import SpectralClustering
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import MeanShift, estimate_bandwidth
+from sklearn.mixture import GMM
 
 from sklearn.linear_model import Perceptron
 from sklearn.svm import SVC
@@ -350,7 +407,7 @@ if __name__ == "__main__":
     parser.add_argument("dataset", help="The dataset to use for input to clustering.")
     parser.add_argument( "-o", "--out", metavar="Output", help="The file in which to store INCREMENT's final clustering.", dest="output")
     parser.add_argument( "-m", "--minPts", help="The minPts parameter to pass to OPTICS.", type=int, default=5)
-    parser.add_argument( "-q", "--query-size", help="The number of points to present to the user per query.", type=int, default=9)
+    parser.add_argument( "-q", "--query-size", help="The number of points to present to the user per query.", type=int, default=1)
     parser.add_argument( "-t", "--times-presented", help="The minimum number of times a point is presented to the user.", type=int)
     parser.add_argument( "-n", "--num-queries", help="The number of queries to answer.", type=int)
     parser.add_argument( "-k", metavar="Clusters" , help="The number of clusters to use with the initial clustering algorithm (where applicable).", type=int, default=20, dest="K")
@@ -358,6 +415,9 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--supervised", help="Specify whether or not to use a supervised model to form initial clustering.", action="store_true")
     parser.add_argument("-v", "--verbose", help="Set INCREMENT to print verbosely.", type=int, default=2)
     parser.add_argument("-N", "--normalize", help="Normalize Data", action="store_true")
+    parser.add_argument("-I", "--image", help="Specifies that training data is a list of image location paths", action="store_true")
+    parser.add_argument("-C", "--convolution", help="Specifies that training data is a list of image location paths", action="store_true")
+    parser.add_argument("-T", "--test", help="Specifies to run tests using the defined settings. SLOW.", action="store_true")
     
     
     args = parser.parse_args()
@@ -367,6 +427,7 @@ if __name__ == "__main__":
     import incUtils as utils
     import incValidation as validation
     import INCREMENT
+    import caffe
     
     main(args)
     

@@ -43,6 +43,16 @@ class BaseINCREMENT(object):
         self.num_queries = 0
         
         self.verbose = verbose
+        
+        if self.verbose <= _VERBOSE_INFO:
+            print
+            print "Class:", type(self).__name__
+            
+            for base in self.__class__.__bases__:
+                print "\t", base.__name__
+            
+            
+            print
 
     def setInstanceDistance(func):
         self.distance = func
@@ -71,8 +81,9 @@ class BaseINCREMENT(object):
             print "Generating Feedback:"
         result =  self._generateFeedback(**kwargs)
         
-        print "Number of Queries:", self.num_queries
-        print
+        if self.verbose <= _VERBOSE_DEFAULT:
+            print "Number of Queries:", self.num_queries
+            print
         
         return result
         
@@ -474,10 +485,11 @@ class MinimumDistanceFeedback(AssignmentFeedback):
         
         if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
+            '''
             print 
             print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
             print
-            
+            '''
             
 class FarthestFirstFeedback(AssignmentFeedback):
     
@@ -512,11 +524,14 @@ class FarthestFirstFeedback(AssignmentFeedback):
         return feedback
     
     
-    def _generateFeedback(self, query_size=9, num_queries=None, **kwargs):        
+    def _generateFeedback(self, query_size=1, num_queries=None, **kwargs):
+        '''
         if(query_size == 1):
             super(FarthestFirstFeedback, self).generateFeedback(**kwargs)
             return
         
+        raise Error("Query Size")
+        '''
         if (self.verbose <= _VERBOSE_INFO):
             print "Farthest First"
         
@@ -571,9 +586,11 @@ class FarthestFirstFeedback(AssignmentFeedback):
         
         if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
+            '''
             print 
             print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
             print
+            '''
             
 class FarthestLabelFeedback(FarthestFirstFeedback):
     
@@ -760,9 +777,11 @@ class RandomMatchingFeedback(AssignmentFeedback):
         if self.verbose <= _VERBOSE_INFO:
             self.printFeedback(feedback)
         
+            '''
             print
             print "Number of Queries: %d of size %d" % (self.num_queries, query_size)
-        
+            '''
+            
 class ClosestPointFeedback(MinimumDistanceFeedback):
     
     #Organizes and manages the presentation of representatives and user feedback
@@ -979,6 +998,26 @@ class SiameseMerging (MergeSubclusters):
         super(SiameseMerging, self).__init__(*args, **kwargs)
         self.batch_size = 10
         self.output_size = 100
+        self.train_size= 100000
+        
+        if "convolution" in kwargs:
+            self.convolution = kwargs["convolution"]
+        else:
+            self.convolution = False
+            
+        if self.verbose <= _VERBOSE_INFO:
+            print 
+            print "Siamese Setup:"
+            print "\tBatch Size:", self.batch_size
+            print "\tOutput Size:", self.output_size
+            print "\tTrain Size:", self.train_size
+            print
+        
+        self.TRAIN_MODEL = "_TRAIN_NET.prototxt"
+        self.DEPLOY_MODEL = "_DEPLOY_NET.prototxt"
+        self.SOLVER_FILE = "solver.prototxt"
+        
+        
     
     def findConstraints(self, merged):
         feedback = self.feedback
@@ -1130,49 +1169,52 @@ class SiameseMerging (MergeSubclusters):
         
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Creating Pairs"
-            
-        pair_data, sims = self.createPairs(train_data, labels, constraints, batch_size)
+
+        
+        gc.collect()
+        data_t, data_p, sims = self.createPairs(train_data, labels, constraints, batch_size)
         
         
         
         if self.verbose <= _VERBOSE_INFO:
             print "Train_data:", train_data.shape
             print "Data:", data.shape
-            print "pairs:", pair_data.shape
+            #print "pairs:", pair_data.shape
             print "sims:", sims.shape
             
         
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Creating files for:", trainName
         
-        utils.writeH5(trainName, pair_data=pair_data, sims=sims)
+        utils.writeH5(trainName, data=data_t, data_p=data_p, sims=sims)
         #utils.writeLMDB(trainName, pair_data, sims)
         
         #Clean Up Memory
-        del pair_data, sims
+        #del pair_data, sims
         gc.collect()
         
-        TRAIN_MODEL = "_TRAIN_NET.prototxt"
-        DEPLOY_MODEL = "_DEPLOY_NET.prototxt"
-        SOLVER_FILE = "solver.prototxt"
-        
         #Write training model prototxt
-        with open(TRAIN_MODEL, "w") as f:
+        with open(self.TRAIN_MODEL, "w") as f:
             f.write('name: "train"\n')
-            f.write(str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize)))
+            s = str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize, convolution=self.convolution))
+            f.write(str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize, convolution=self.convolution)))
+            if self.verbose == _VERBOSE_INFO:
+                print "Network:"
+                print s
+                print
     
-        with open(DEPLOY_MODEL, "w") as f:
+        with open(self.DEPLOY_MODEL, "w") as f:
             f.write('name: "deploy"\n')
-            f.write(str(utils.createDeploySiamese(source = deployName +".txt", batch_size=data.shape[0], output_size=outSize))) # leave batch_size =1 here. Causes weird errors otherwise
+            f.write(str(utils.createDeploySiamese(source = deployName +".txt", batch_size=data.shape[0], output_size=outSize, convolution=self.convolution))) # leave batch_size =1 here. Causes weird errors otherwise
 
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Training siamese network"
             
-        solver = caffe.SGDSolver(SOLVER_FILE)
+        solver = caffe.SGDSolver(self.SOLVER_FILE)
         #solver.net.set_input_arrays(pair_data,sims)
         solver.solve()
         
-        net = caffe.Net(DEPLOY_MODEL, "_iter_" + str(solver.iter) + ".caffemodel", caffe.TEST)
+        net = caffe.Net(self.DEPLOY_MODEL, "_iter_" + str(solver.iter) + ".caffemodel", caffe.TEST)
         
         return net
 
@@ -1182,6 +1224,11 @@ class SiameseMerging (MergeSubclusters):
 class SiameseTrainAll(SiameseMerging):
     
     def getTrainData(self,feedback, **kwargs):
+        if self.verbose <= _VERBOSE_INFO:
+            print
+            print "Train All"
+            print
+            
         train_data = []
         labels = [] 
         
@@ -1195,7 +1242,9 @@ class SiameseTrainAll(SiameseMerging):
         return np.array(train_data), np.array(labels), self.findConstraints(feedback)
     
     
-    def createPairs(self, data, targets, constraints, batch_size, num_pairs=500000):
+    def createPairs(self, data, targets, constraints, batch_size, num_pairs=None):
+        if num_pairs == None:
+            num_pairs = self.train_size
         n = data.shape[0]
         
         if n*(n-1)/2 > num_pairs:
@@ -1206,6 +1255,11 @@ class SiameseTrainAll(SiameseMerging):
 class SiameseTestAll(SiameseMerging):
     
     def getData(self, **kwargs):
+        if self.verbose <= _VERBOSE_INFO:
+            print
+            print "Test All"
+            print
+            
         data = []
         targets = [] 
         lookUp = []
