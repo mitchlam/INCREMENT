@@ -1,10 +1,10 @@
 net: "_TRAIN_NET.prototxt"
-base_lr: 0.001
+base_lr: 0.1
 lr_policy: "inv"
 gamma: 0.0001
 power: 0.75
-momentum: 0.9
+momentum: 0.1
 max_iter: 10000
 display: 1000
-weight_decay: 0.0000
+weight_decay: 0.000000
 solver_mode: GPU

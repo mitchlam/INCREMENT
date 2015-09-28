@@ -450,25 +450,25 @@ def addMainLeg(n, output_size):
 	n.ip1 = L.InnerProduct(n.data, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 , weight_filler=dict(type='xavier'),  bias_filler=dict(type='gaussian', std=0.1))
 	n.s1 = L.Sigmoid(n.ip1, in_place=True)
 
-	#n.ip2 = L.InnerProduct(n.ip1, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'),  bias_filler=dict(type='constant'))
-	#n.s2 = L.Sigmoid(n.ip2, in_place=True)
+	n.ip2 = L.InnerProduct(n.ip1, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'),  bias_filler=dict(type='constant'))
+	n.s2 = L.Sigmoid(n.ip2, in_place=True)
 	'''
 	n.ip3 = L.InnerProduct(n.ip2, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s3 = L.Sigmoid(n.ip3, in_place=True)
 	'''
-	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
+	n.feat = L.InnerProduct(n.ip2, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
 	
 def addPairedLeg(n, output_size):
 	n.ip1_p = L.InnerProduct(n.data_p, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='gaussian', std=0.1))
 	n.s1_p = L.Sigmoid(n.ip1_p, in_place=True)
 	
-	#n.ip2_p = L.InnerProduct(n.ip1_p, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
-	#n.s2_p = L.Sigmoid(n.ip2_p, in_place=True)
+	n.ip2_p = L.InnerProduct(n.ip1_p, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
+	n.s2_p = L.Sigmoid(n.ip2_p, in_place=True)
 	'''
 	n.ip3_p = L.InnerProduct(n.ip2_p, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s3_p = L.Sigmoid(n.ip3_p, in_place=True)
 	'''
-	n.feat_p = L.InnerProduct(n.ip1_p, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
+	n.feat_p = L.InnerProduct(n.ip2_p, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
 	
 
 def addMainConvLeg(n, output_size):
