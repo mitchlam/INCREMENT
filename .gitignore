@@ -1,8 +1,10 @@
 *.swp
 *.pyc
+*.cpy
 data
 stdout/*
 data/*
 output/*
 profile/*
+results/*
 _*
