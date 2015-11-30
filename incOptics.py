@@ -5,8 +5,6 @@ import itertools
 import numpy as np
 import matplotlib.pyplot as pyplot
 
-from image.signalutils import blur_bilateral
-
 class heap:
     def __init__(self):
         self.pq = []

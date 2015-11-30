@@ -411,76 +411,136 @@ def feedData(net, data):
 	return net.forward()
 
 
-def createTrainSiamese(source, batch_size, output_size=10, convolution=False):
+def createTrainSiamese(source, batch_size, output_size=10, convolution=False, alexNet=False):
 	n = caffe.NetSpec()
 	
-	n.data, n.data_p, n.sims = L.HDF5Data(source=source, batch_size=batch_size, shuffle=True, ntop=3)
+	n.data, n.labels = L.HDF5Data(source=source, batch_size=batch_size, shuffle=True, include=dict(phase=caffe.TRAIN), name="trainData", ntop=2)
+
+	
+	
 	#n.pair_data, n.sims = L.Data(source = source, backend=P.Data.LMDB, batch_size=batch_size, ntop=2)
 	#n.pair_data, n.sims = L.MemoryData(batch_size=batch_size, channels=2, height=vector_size, width=1, ntop=2)
 	
 	#n.data, n.data_p = L.Slice(n.pair_data, axis=1, ntop=2)
 	
 	if convolution:
-		addMainConvLeg(n, output_size)
-		addPairedConvLeg(n, output_size)
+		if alexNet:
+			addAlexNetLeg(n,output_size)
+		else:
+			addConvLeg(n, output_size)
+
 	else:
-		addMainLeg(n, output_size)
-		addPairedLeg(n, output_size)
+		addLeg(n, output_size)
 	
 	#Loss
-	n.loss = L.ContrastiveLoss(n.feat, n.feat_p,n.sims, margin=1)
+	n.loss = L.WrapperContrastiveLoss(n.feat, n.labels, contrastive_loss_param=dict(margin=1), include=dict(phase=caffe.TRAIN))
 	
 	return n.to_proto()
 
-def createDeploySiamese(source, batch_size, output_size=10, convolution=False):
+def createDeploySiamese(source, batch_size, output_size=10, convolution=False, alexNet=False):
 	n = caffe.NetSpec()
 	
-	n.data = L.HDF5Data(batch_size=batch_size, source=source)
+	n.data = L.HDF5Data(batch_size=batch_size, source=source, include=dict(phase=caffe.TEST))
 	#n.data = L.Data(backend=P.Data.LMDB, batch_size=batch_size, source=source)
 	
 	if convolution:
-		addMainConvLeg(n,output_size)
+		if alexNet:
+			addAlexNetLeg(n, output_size)
+		else:
+			addConvLeg(n,output_size)
 	else:
-		addMainLeg(n, output_size)
+		addLeg(n, output_size)
 	
 	return n.to_proto()
 
 
-def addMainLeg(n, output_size):
+def addLeg(n, output_size):
 	n.ip1 = L.InnerProduct(n.data, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 , weight_filler=dict(type='xavier'),  bias_filler=dict(type='gaussian', std=0.1))
 	n.s1 = L.Sigmoid(n.ip1, in_place=True)
 
-	#n.ip2 = L.InnerProduct(n.ip1, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'),  bias_filler=dict(type='constant'))
-	#n.s2 = L.Sigmoid(n.ip2, in_place=True)
+	n.ip2 = L.InnerProduct(n.ip1, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'),  bias_filler=dict(type='constant'))
+	n.s2 = L.Sigmoid(n.ip2, in_place=True)
 	'''
 	n.ip3 = L.InnerProduct(n.ip2, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s3 = L.Sigmoid(n.ip3, in_place=True)
 	'''
+	n.feat = L.InnerProduct(n.ip2, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
+	
+	
+
+def addConvLeg(n, output_size):
+	n.conv1 = L.Convolution(n.data, kernel_size=5, num_output=20, param=[dict(name="conv1_w", lr_mult=1), dict(name="conv1_b", lr_mult=2)], weight_filler=dict(type='xavier'))
+	n.r1 = L.ReLU(n.conv1, in_place=True)	
+	n.pool1 = L.Pooling(n.conv1, kernel_size=2, stride=2, pool=P.Pooling.MAX)
+	
+	n.conv2 = L.Convolution(n.pool1, kernel_size=5, num_output=50, param=[dict(name="conv2_w", lr_mult=1), dict(name="conv2_b", lr_mult=2)], weight_filler=dict(type='xavier'))
+	n.r2 = L.ReLU(n.conv2, in_place=True)	
+	n.pool2 = L.Pooling(n.conv2, kernel_size=2, stride=2, pool=P.Pooling.MAX)
+	
+	n.ip1 = L.InnerProduct(n.pool2, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 , weight_filler=dict(type='xavier'),  bias_filler=dict(type='gaussian', std=0.1))
+	n.r3 = L.TanH(n.ip1, in_place=True)	
+
 	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
 	
+def addAlexNetLeg(n, output_size):
+	lr_mult_w = 1
+	decay_mult_w = 1
+	lr_mult_b = 2
+	decay_mult_b = 0
+	
+	#1
+	n.conv1 = L.Convolution(n.data, num_output=96, kernel_size=11, stride=4,
+						  weight_filler=dict(type='gaussian', std=0.01), bias_filler=dict(type='constant', value=0), param=[dict(lr_mult=lr_mult_w, decay_mult=decay_mult_w),dict(lr_mult=lr_mult_b, decay_mult=decay_mult_b)])
+	n.relu1 = L.ReLU(n.conv1, in_place=True)
+	n.norm1 = L.LRN(n.conv1, local_size=5, alpha=0.0001, beta=0.75)
+	n.pool1 = L.Pooling(n.norm1, kernel_size=3, stride=2, pool=P.Pooling.MAX)
+	
+	#2
+	n.conv2 = L.Convolution(n.pool1, num_output=256, pad=2, kernel_size=5, group=2,
+						  weight_filler=dict(type='gaussian', std=0.01), bias_filler=dict(type='constant', value=0), param=[dict(lr_mult=lr_mult_w, decay_mult=decay_mult_w),dict(lr_mult=lr_mult_b, decay_mult=decay_mult_b)])
+	n.relu2 = L.ReLU(n.conv2, in_place=True)
+	n.norm2 = L.LRN(n.conv2, local_size=5, alpha=0.0001, beta=0.75)
+	n.pool2 = L.Pooling(n.norm2, kernel_size=3, stride=2, pool=P.Pooling.MAX)
+	
+	#3
+	n.conv3 = L.Convolution(n.pool2, num_output=384, pad=1, kernel_size=3,
+						  weight_filler=dict(type='gaussian', std=0.01), bias_filler=dict(type='constant', value=0), param=[dict(lr_mult=lr_mult_w, decay_mult=decay_mult_w),dict(lr_mult=lr_mult_b, decay_mult=decay_mult_b)])
+	n.relu3 = L.ReLU(n.conv3, in_place=True)
+
+	#4
+	n.conv4 = L.Convolution(n.conv3, num_output=384, pad=1, kernel_size=3, group=2,
+						  weight_filler=dict(type='gaussian', std=0.01), bias_filler=dict(type='constant', value=0), param=[dict(lr_mult=lr_mult_w, decay_mult=decay_mult_w),dict(lr_mult=lr_mult_b, decay_mult=decay_mult_b)])
+	n.relu4 = L.ReLU(n.conv4, in_place=True)
+
+	#5
+	n.conv5 = L.Convolution(n.conv4, num_output=256, pad=1, kernel_size=3, group=2,
+						  weight_filler=dict(type='gaussian', std=0.01), bias_filler=dict(type='constant', value=0), param=[dict(lr_mult=lr_mult_w, decay_mult=decay_mult_w),dict(lr_mult=lr_mult_b, decay_mult=decay_mult_b)])
+	n.relu5 = L.ReLU(n.conv5, in_place=True)
+	n.pool5 = L.Pooling(n.conv5, kernel_size=3, stride=2, pool=P.Pooling.MAX)
+	
+	#6
+	n.ip1 = L.InnerProduct(n.pool5, param=[dict(lr_mult=10), dict(lr_mult=20)], num_output = 500, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
+	n.r1 = L.TanH(n.ip1, in_place=True)
+	
+	#features
+	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=10), dict(name="feat_b", lr_mult=20)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
+	
+	
+	
+
+#Useless
+'''
 def addPairedLeg(n, output_size):
 	n.ip1_p = L.InnerProduct(n.data_p, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='gaussian', std=0.1))
 	n.s1_p = L.Sigmoid(n.ip1_p, in_place=True)
 	
 	#n.ip2_p = L.InnerProduct(n.ip1_p, param=[dict(name="ip2_w", lr_mult=1), dict(name="ip2_b", lr_mult=2)], num_output=250 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	#n.s2_p = L.Sigmoid(n.ip2_p, in_place=True)
-	'''
+	
 	n.ip3_p = L.InnerProduct(n.ip2_p, param=[dict(name="ip3_w", lr_mult=1), dict(name="ip3_b", lr_mult=2)], num_output=100 ,weight_filler=dict(type='xavier'), bias_filler=dict(type='constant'))
 	n.s3_p = L.Sigmoid(n.ip3_p, in_place=True)
-	'''
+	
 	n.feat_p = L.InnerProduct(n.ip1_p, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
-	
-
-def addMainConvLeg(n, output_size):
-	n.conv1 = L.Convolution(n.data, kernel_size=5, num_output=20, param=[dict(name="conv1_w", lr_mult=1), dict(name="conv1_b", lr_mult=2)], weight_filler=dict(type='xavier'))
-	n.pool1 = L.Pooling(n.conv1, kernel_size=2, stride=2, pool=P.Pooling.MAX)
-	n.conv2 = L.Convolution(n.pool1, kernel_size=5, num_output=50, param=[dict(name="conv2_w", lr_mult=1), dict(name="conv2_b", lr_mult=2)], weight_filler=dict(type='xavier'))
-	n.pool2 = L.Pooling(n.conv2, kernel_size=2, stride=2, pool=P.Pooling.MAX)
-	
-	n.ip1 = L.InnerProduct(n.pool2, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 , weight_filler=dict(type='xavier'),  bias_filler=dict(type='gaussian', std=0.1))
-	n.r1 = L.ReLU(n.ip1, in_place=True)	
-
-	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
 	
 def addPairedConvLeg(n, output_size):
 	n.conv1_p = L.Convolution(n.data_p, kernel_size=5, num_output=20, param=[dict(name="conv1_w", lr_mult=1), dict(name="conv1_b", lr_mult=2)], weight_filler=dict(type='xavier'))
@@ -492,8 +552,8 @@ def addPairedConvLeg(n, output_size):
 	n.r1_p = L.ReLU(n.ip1_p, in_place=True)
 
 	n.feat_p = L.InnerProduct(n.ip1_p, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
-    
-    
+
+ '''   
     
     
     

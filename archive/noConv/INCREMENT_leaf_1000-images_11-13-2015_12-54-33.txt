@@ -1,0 +1,32 @@
+./incDriver.py data/leaf_1000-images.csv -I -k 60 -i mean-shift -S 2 -T -v 1
+
+
+Using: data/leaf_1000-images.csv (1000)  --  (24.430102 s)
+Initial Clustering: mean-shift
+Traceback (most recent call last):
+  File "./incDriver.py", line 435, in <module>
+    main(args)
+  File "./incDriver.py", line 313, in main
+    clusters = cluster_data(X,Y, args)
+  File "./incDriver.py", line 144, in cluster_data
+    alg.fit(data)
+  File "/usr/local/lib/python2.7/dist-packages/sklearn/cluster/mean_shift_.py", line 350, in fit
+    cluster_all=self.cluster_all)
+  File "/usr/local/lib/python2.7/dist-packages/sklearn/cluster/mean_shift_.py", line 173, in mean_shift
+    % bandwidth)
+ValueError: No point was within bandwidth=22.376202 of any seed. Try a different seeding strategy or increase the bandwidth.
+
+
+
+
+Solver:
+net: "_TRAIN_NET.prototxt"
+base_lr: 0.01
+lr_policy: "inv"
+gamma: 0.0001
+power: 0.75
+momentum: 0.9
+max_iter: 10000
+display: 1000
+weight_decay: 0.000000
+solver_mode: GPU

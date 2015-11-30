@@ -1,0 +1,305 @@
+./incDriver.py data/leedsbutterfly.csv -I -k 10 -i spectral -S 2 -T -v 1
+
+
+Using: data/leedsbutterfly.csv (832)  --  (3.573561 s)
+Initial Clustering: spectral
+Initial:  --  (11.591945 s)
+Accuracy: 162 of 832: 19.471 %
+H: 0.083960 C: 0.213547 V: 0.120531 JCC: 0.101318
+
+Rows are labels, Columns are Clusters
+
+      0  1   2  3  4  5  6   7   8   9
+  0   2  4  63  2  4  3  5   0   0   1
+  1  10  0  66  0  0  3  1   1   1   0
+  2   2  0  54  1  0  3  1   0   0   0
+  3   1  2  86  0  0  2  2   0   0   0
+  4   4  1  76  1  1  3  1   0   1   0
+  5   6  4  68  9  1  0  1   0   1   0
+  6   3  0  81  1  0  3  1   0   0   0
+  7   7  0  75  6  0  0  1   1  10   0
+  8   3  0  77  5  0  1  0   1   3   0
+  9   0  0  24  0  0  0  0  15   0  16
+
+
+
+
+Class: MergeINCREMENT
+	RecursiveOPTICS
+	MedoidSelector
+	FarthestLabelFeedback
+	OracleMatching
+	Siamese
+
+
+Siamese Setup:
+	Batch Size: 10
+	Output Size: 100
+	Train Size: 100000
+
+Testing INCREMENT
+Subclustering:
+Computing Distance
+Running OPTICS: minPts = 5
+
+Subcluster Breakdown:
+	0: 26.752051 (38)
+		0: 23.094568 -- 8.863416  (8)
+		1: 27.727380 -- 6.226015  (30)
+	--> std: 7.121011 -- 1.318700
+
+	1: 17.178546 (11)
+		2: 17.178546 -- 5.448051  (11)
+	--> std: 5.448051 -- 0.000000
+
+	2: 28.320684 (670)
+		3: 28.320684 -- 3.852339  (670)
+	--> std: 3.852339 -- 0.000000
+
+	3: 22.984279 (25)
+		4: 22.984279 -- 4.853643  (25)
+	--> std: 4.853643 -- 0.000000
+
+	4: 17.435798 (6)
+		5: 17.435798 -- 7.808267  (6)
+	--> std: 7.808267 -- 0.000000
+
+	5: 21.183261 (18)
+		6: 21.183261 -- 5.284048  (18)
+	--> std: 5.284048 -- 0.000000
+
+	6: 27.117593 (13)
+		7: 27.117593 -- 7.924508  (13)
+	--> std: 7.924508 -- 0.000000
+
+	7: 17.724680 (18)
+		8: 17.724680 -- 5.682056  (18)
+	--> std: 5.682056 -- 0.000000
+
+	8: 22.595985 (16)
+		9: 22.595985 -- 5.920041  (16)
+	--> std: 5.920041 -- 0.000000
+
+	9: 26.286655 (17)
+		10: 26.286655 -- 6.798591  (17)
+	--> std: 6.798591 -- 0.000000
+
+	Avg: 22.757953 -- 4.070639 
+	Std: 6.069255 -- 1.251851 
+
+Subclusters Formed: 11
+
+Selecting Representatives:
+Representatives:
+[1, 0, 1, 35, 4, 3, 3, 6, 4, 2, 1]
+
+
+Generating Feedback:
+Farthest First
+Computing pairwise distances between representatives.
+Beginning Queries
+Feedback: 2
+	{'5': [0]}
+	{'9': [6]}
+Number of Queries: 2
+
+Merging Subclusters:
+Generating Data
+
+Train All
+
+Merged Feedback:
+	[[6], [0]] 2
+
+Connot Link Subcluster Constraints:
+	[set([1]), set([0])] 2
+
+Test All
+
+Creating files for: _deploy
+Train_data: (26, 3, 64, 64)
+Data: (832, 3, 64, 64)
+Creating files for: _train
+Network:
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "data"
+  top: "labels"
+  hdf5_data_param {
+    source: "_train.txt"
+    batch_size: 10
+    shuffle: true
+  }
+}
+layer {
+  name: "ip1"
+  type: "InnerProduct"
+  bottom: "data"
+  top: "ip1"
+  param {
+    name: "ip1_w"
+    lr_mult: 1
+  }
+  param {
+    name: "ip1_b"
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 500
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "gaussian"
+      std: 0.1
+    }
+  }
+}
+layer {
+  name: "s1"
+  type: "Sigmoid"
+  bottom: "ip1"
+  top: "ip1"
+}
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  bottom: "ip1"
+  top: "ip2"
+  param {
+    name: "ip2_w"
+    lr_mult: 1
+  }
+  param {
+    name: "ip2_b"
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 250
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "s2"
+  type: "Sigmoid"
+  bottom: "ip2"
+  top: "ip2"
+}
+layer {
+  name: "feat"
+  type: "InnerProduct"
+  bottom: "ip2"
+  top: "feat"
+  param {
+    name: "feat_w"
+    lr_mult: 1
+  }
+  param {
+    name: "feat_b"
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "loss"
+  type: "WrapperContrastiveLoss"
+  bottom: "feat"
+  bottom: "labels"
+  top: "loss"
+  contrastive_loss_param {
+    margin: 1
+  }
+}
+
+
+Training siamese network
+data (832, 3, 64, 64)
+targets: (832,)
+K: 2
+Reclustering
+
+~! 2 !~
+Accuracy: 149 of 832: 17.909 %
+H: 0.022117 C: 0.075655 V: 0.034228 JCC: 0.101573
+
+
+
+~! 4 !~
+Accuracy: 162 of 832: 19.471 %
+H: 0.054707 C: 0.095034 V: 0.069440 JCC: 0.096876
+
+
+
+~! 6 !~
+Accuracy: 140 of 832: 16.827 %
+H: 0.055283 C: 0.234686 V: 0.089486 JCC: 0.104727
+
+
+
+~! 8 !~
+Accuracy: 173 of 832: 20.793 %
+H: 0.072462 C: 0.113716 V: 0.088519 JCC: 0.094022
+
+
+
+~! 10 !~
+Accuracy: 149 of 832: 17.909 %
+H: 0.062019 C: 0.187722 V: 0.093235 JCC: 0.102471
+
+
+INCREMENT: (10)
+SubClusters: 11
+Accuracy: 162 of 832: 19.471 %
+H: 0.086217 C: 0.213703 V: 0.122865 JCC: 0.101267
+
+
+Final
+Accuracy: 149 of 832: 17.909 %
+H: 0.062019 C: 0.187722 V: 0.093235 JCC: 0.102471
+
+Rows are labels, Columns are Clusters
+
+      0   1   2  3  4  5
+  0   4  67   2  5  4  2
+  1  11  66   0  3  1  1
+  2   2  54   0  3  1  1
+  3   1  88   0  2  2  0
+  4   5  77   0  4  1  1
+  5   7  72   1  0  2  8
+  6   3  81   0  3  1  1
+  7   9  75   1  1  7  7
+  8   5  77   1  1  0  6
+  9   0  24  30  0  0  1
+
+
+
+Total Time: 45 m 50.529288 s
+
+
+
+
+Solver:
+net: "_TRAIN_NET.prototxt"
+base_lr: 0.01
+lr_policy: "inv"
+gamma: 0.0001
+power: 0.75
+momentum: 0.9
+max_iter: 10000
+display: 1000
+weight_decay: 0.000000
+solver_mode: GPU

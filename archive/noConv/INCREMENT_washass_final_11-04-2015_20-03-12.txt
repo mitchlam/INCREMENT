@@ -1,0 +1,28 @@
+./incDriver.py data/washass_final.csv -i pre -S 2 -T -v 1
+
+
+Traceback (most recent call last):
+  File "./incDriver.py", line 435, in <module>
+    main(args)
+  File "./incDriver.py", line 299, in main
+    X,Y = getData(args.dataset, args.image)
+  File "./incDriver.py", line 229, in getData
+    return loadCSV(f, image)
+  File "./incDriver.py", line 172, in loadCSV
+    f = open(filename, "r")
+IOError: [Errno 2] No such file or directory: 'data/washass_final.csv'
+
+
+
+
+Solver:
+net: "_TRAIN_NET.prototxt"
+base_lr: 0.01
+lr_policy: "inv"
+gamma: 0.0001
+power: 0.75
+momentum: 0.9
+max_iter: 10000
+display: 1000
+weight_decay: 0.000000
+solver_mode: GPU

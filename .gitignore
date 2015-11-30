@@ -7,4 +7,6 @@ data/*
 output/*
 profile/*
 results/*
+images/*
+archive/*
 _*

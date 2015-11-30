@@ -996,14 +996,21 @@ class SiameseMerging (MergeSubclusters):
     
     def __init__(self, *args, **kwargs):
         super(SiameseMerging, self).__init__(*args, **kwargs)
-        self.batch_size = 10
+        self.batch_size = 5
         self.output_size = 100
         self.train_size= 100000
         
+        
+        self.finetune = False
+
         if "convolution" in kwargs:
             self.convolution = kwargs["convolution"]
+            if "finetune" in kwargs:
+                self.finetune = kwargs["finetune"]
         else:
             self.convolution = False
+        
+            
             
         if self.verbose <= _VERBOSE_INFO:
             print 
@@ -1011,12 +1018,16 @@ class SiameseMerging (MergeSubclusters):
             print "\tBatch Size:", self.batch_size
             print "\tOutput Size:", self.output_size
             print "\tTrain Size:", self.train_size
+            print "\tConvolutional:", self.convolution
+            print "\tFinetuning:", self.finetune
             print
         
         self.TRAIN_MODEL = "_TRAIN_NET.prototxt"
         self.DEPLOY_MODEL = "_DEPLOY_NET.prototxt"
         self.SOLVER_FILE = "solver.prototxt"
         
+        self.PRETRAINED_MODEL = "_pretrained/bvlc_alexnet/bvlc_alexnet.caffemodel"
+        self.FINETUNE_SOLVER_FILE = "finetune_solver.prototxt"
         
     
     def findConstraints(self, merged):
@@ -1167,12 +1178,12 @@ class SiameseMerging (MergeSubclusters):
         utils.writeH5(deployName, data=data)
         #utils.writeLMDB(deployName, data)
         
-        if self.verbose <= _VERBOSE_DEFAULT:
-            print "Creating Pairs"
+        #if self.verbose <= _VERBOSE_DEFAULT:
+        #    print "Creating Pairs"
 
         
-        gc.collect()
-        data_t, data_p, sims = self.createPairs(train_data, labels, constraints, batch_size)
+        #gc.collect()
+        #data_t, data_p, sims = self.createPairs(train_data, labels, constraints, batch_size)
         
         
         
@@ -1180,37 +1191,44 @@ class SiameseMerging (MergeSubclusters):
             print "Train_data:", train_data.shape
             print "Data:", data.shape
             #print "pairs:", pair_data.shape
-            print "sims:", sims.shape
+            #print "sims:", sims.shape
             
         
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Creating files for:", trainName
         
-        utils.writeH5(trainName, data=data_t, data_p=data_p, sims=sims)
+        utils.writeH5(trainName, data=train_data, labels=labels)
+       #utils.writeH5(trainName, data=data_t, data_p=data_p, sims=sims)
         #utils.writeLMDB(trainName, pair_data, sims)
         
         #Clean Up Memory
         #del pair_data, sims
-        gc.collect()
+        #gc.collect()
         
         #Write training model prototxt
         with open(self.TRAIN_MODEL, "w") as f:
             f.write('name: "train"\n')
-            s = str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize, convolution=self.convolution))
-            f.write(str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize, convolution=self.convolution)))
+            s = str(utils.createTrainSiamese(source = trainName+".txt", batch_size=batch_size, output_size=outSize, convolution=self.convolution, alexNet=self.finetune))
+            f.write(s)
             if self.verbose == _VERBOSE_INFO:
                 print "Network:"
                 print s
                 print
-    
+        
         with open(self.DEPLOY_MODEL, "w") as f:
             f.write('name: "deploy"\n')
-            f.write(str(utils.createDeploySiamese(source = deployName +".txt", batch_size=data.shape[0], output_size=outSize, convolution=self.convolution))) # leave batch_size =1 here. Causes weird errors otherwise
-
+            f.write(str(utils.createDeploySiamese(source = deployName +".txt", batch_size=data.shape[0], output_size=outSize, convolution=self.convolution, alexNet=self.finetune))) # leave batch_size = size of data here. Causes weird errors otherwise
+        
+        
         if self.verbose <= _VERBOSE_DEFAULT:
             print "Training siamese network"
-            
-        solver = caffe.SGDSolver(self.SOLVER_FILE)
+        
+        if not self.finetune:   
+            solver = caffe.SGDSolver(self.SOLVER_FILE)
+        else:
+            solver = caffe.SGDSolver(self.FINETUNE_SOLVER_FILE)
+            solver.net.copy_from(self.PRETRAINED_MODEL)
+   
         #solver.net.set_input_arrays(pair_data,sims)
         solver.solve()
         

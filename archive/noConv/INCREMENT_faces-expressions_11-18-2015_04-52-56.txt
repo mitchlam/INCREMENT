@@ -1,0 +1,500 @@
+./incDriver.py data/faces-expressions.csv -I -k 4 -i complete -S 2 -T -v 1
+
+
+Using: data/faces-expressions.csv (624)  --  (1.504580 s)
+Initial Clustering: complete
+Initial:  --  (2.662774 s)
+Accuracy: 161 of 624: 25.801 %
+H: 0.000434 C: 0.000496 V: 0.000463 JCC: 0.165662
+
+Rows are labels, Columns are Clusters
+
+      0   1   2   3
+  0  45  77  17  19
+  1  44  76  19  17
+  2  45  75  17  18
+  3  45  71  19  20
+
+
+
+
+Class: MergeINCREMENT
+	RecursiveOPTICS
+	MedoidSelector
+	FarthestLabelFeedback
+	OracleMatching
+	Siamese
+
+
+Siamese Setup:
+	Batch Size: 10
+	Output Size: 100
+	Train Size: 100000
+
+Testing INCREMENT
+Subclustering:
+Computing Distance
+Running OPTICS: minPts = 5
+
+Subcluster Breakdown:
+	0: 5.762289 (179)
+		0: 4.202541 -- 2.784993  (8)
+		1: 4.676220 -- 1.803011  (8)
+		2: 4.566646 -- 1.661428  (15)
+		3: 4.912443 -- 1.727819  (11)
+		4: 4.847793 -- 3.153005  (5)
+		5: 6.001929 -- 3.466206  (19)
+		6: 5.646150 -- 1.763100  (23)
+		7: 6.165970 -- 3.547243  (9)
+		8: 7.080765 -- 4.056466  (14)
+		9: 5.914333 -- 2.183804  (12)
+		10: 4.539946 -- 1.923630  (15)
+		11: 6.935998 -- 2.279365  (34)
+		12: 6.704399 -- 6.825010  (6)
+	--> std: 2.979246 -- 1.381028
+
+	1: 4.268028 (299)
+		13: 6.590203 -- 2.452437  (11)
+		14: 3.183484 -- 1.198061  (9)
+		15: 3.332497 -- 2.660031  (5)
+		16: 3.023620 -- 1.354755  (6)
+		17: 2.798868 -- 1.324446  (11)
+		18: 3.028369 -- 2.410457  (5)
+		19: 3.017082 -- 1.402678  (7)
+		20: 3.912022 -- 2.231927  (10)
+		21: 0.521771 -- 0.304900  (4)
+		22: 1.106629 -- 0.646202  (4)
+		23: 0.801060 -- 0.462944  (4)
+		24: 1.058959 -- 0.620087  (4)
+		25: 3.849466 -- 4.454594  (5)
+		26: 2.315229 -- 1.364249  (4)
+		27: 0.972392 -- 0.562071  (4)
+		28: 3.569284 -- 1.478937  (16)
+		29: 2.413101 -- 1.080401  (8)
+		30: 3.225720 -- 1.629771  (11)
+		31: 4.745342 -- 2.380077  (5)
+		32: 4.984735 -- 2.393146  (24)
+		33: 4.258699 -- 2.081488  (6)
+		34: 3.355511 -- 1.175762  (13)
+		35: 6.517132 -- 2.748979  (14)
+		36: 4.277634 -- 1.980004  (7)
+		37: 3.101970 -- 1.942794  (7)
+		38: 1.558042 -- 0.911184  (4)
+		39: 5.824771 -- 5.876117  (7)
+		40: 3.814654 -- 2.208615  (4)
+		41: 2.949674 -- 3.271961  (6)
+		42: 2.441053 -- 1.455013  (4)
+		43: 1.261001 -- 0.781550  (4)
+		44: 7.505258 -- 5.596054  (10)
+		45: 4.824207 -- 2.181308  (10)
+		46: 5.617427 -- 2.219526  (10)
+		47: 8.235428 -- 3.419073  (12)
+		48: 4.461489 -- 4.165462  (11)
+		49: 7.554104 -- 3.866557  (13)
+	--> std: 3.248298 -- 1.329124
+
+	2: 4.522011 (72)
+		50: 5.841223 -- 3.468795  (4)
+		51: 4.580615 -- 1.699654  (13)
+		52: 3.426566 -- 2.590047  (16)
+		53: 3.521516 -- 1.560058  (8)
+		54: 5.886716 -- 4.163904  (3)
+		55: 2.973894 -- 2.654588  (5)
+		56: 4.027719 -- 3.487525  (5)
+		57: 4.890680 -- 2.320395  (8)
+		58: 6.788107 -- 4.776101  (10)
+	--> std: 3.199787 -- 1.025864
+
+	3: 4.283288 (74)
+		59: 1.113930 -- 0.798054  (3)
+		60: 1.955277 -- 1.296339  (8)
+		61: 1.866398 -- 1.078283  (4)
+		62: 4.822813 -- 1.347715  (21)
+		63: 5.141311 -- 1.963912  (8)
+		64: 5.304575 -- 4.181693  (6)
+		65: 4.255293 -- 1.786369  (7)
+		66: 4.117343 -- 1.870952  (8)
+		67: 5.950100 -- 2.664980  (9)
+	--> std: 2.461959 -- 0.964175
+
+	Avg: 4.708904 -- 0.616455 
+	Std: 2.972322 -- 0.311617 
+
+Subclusters Formed: 68
+
+Selecting Representatives:
+Representatives:
+[2, 3, 1, 4, 2, 7, 5, 2, 6, 0, 6, 7, 3, 7, 2, 3, 0, 5, 1, 1, 5, 2, 3, 3, 0, 2, 1, 3, 0, 4, 2, 1, 4, 4, 5, 3, 1, 2, 2, 2, 3, 3, 1, 2, 1, 3, 0, 1, 4, 3, 1, 1, 3, 1, 1, 2, 2, 1, 2, 0, 2, 1, 9, 3, 1, 1, 1, 0]
+
+
+Generating Feedback:
+Farthest First
+Computing pairwise distances between representatives.
+Beginning Queries
+Feedback: 2
+	{'angry': [15]}
+	{'happy': [64]}
+Number of Queries: 2
+
+Merging Subclusters:
+Generating Data
+
+Train All
+
+Merged Feedback:
+	[[15], [64]] 2
+
+Connot Link Subcluster Constraints:
+	[set([1]), set([0])] 2
+
+Test All
+
+Creating files for: _deploy
+Train_data: (11, 3, 64, 64)
+Data: (624, 3, 64, 64)
+Creating files for: _train
+Network:
+layer {
+  name: "data"
+  type: "HDF5Data"
+  top: "data"
+  top: "labels"
+  hdf5_data_param {
+    source: "_train.txt"
+    batch_size: 10
+    shuffle: true
+  }
+}
+layer {
+  name: "ip1"
+  type: "InnerProduct"
+  bottom: "data"
+  top: "ip1"
+  param {
+    name: "ip1_w"
+    lr_mult: 1
+  }
+  param {
+    name: "ip1_b"
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 500
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "gaussian"
+      std: 0.1
+    }
+  }
+}
+layer {
+  name: "s1"
+  type: "Sigmoid"
+  bottom: "ip1"
+  top: "ip1"
+}
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  bottom: "ip1"
+  top: "ip2"
+  param {
+    name: "ip2_w"
+    lr_mult: 1
+  }
+  param {
+    name: "ip2_b"
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 250
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "s2"
+  type: "Sigmoid"
+  bottom: "ip2"
+  top: "ip2"
+}
+layer {
+  name: "feat"
+  type: "InnerProduct"
+  bottom: "ip2"
+  top: "feat"
+  param {
+    name: "feat_w"
+    lr_mult: 1
+  }
+  param {
+    name: "feat_b"
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 100
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "loss"
+  type: "WrapperContrastiveLoss"
+  bottom: "feat"
+  bottom: "labels"
+  top: "loss"
+  contrastive_loss_param {
+    margin: 1
+  }
+}
+
+
+Training siamese network
+data (624, 3, 64, 64)
+targets: (624,)
+K: 2
+Reclustering
+
+~! 2 !~
+Accuracy: 161 of 624: 25.801 %
+H: 0.000170 C: 0.000341 V: 0.000227 JCC: 0.198206
+
+
+
+~! 4 !~
+Accuracy: 169 of 624: 27.083 %
+H: 0.002866 C: 0.012276 V: 0.004647 JCC: 0.236271
+
+
+
+~! 6 !~
+Accuracy: 167 of 624: 26.763 %
+H: 0.001661 C: 0.002486 V: 0.001991 JCC: 0.189015
+
+
+
+~! 8 !~
+Accuracy: 172 of 624: 27.564 %
+H: 0.001957 C: 0.002729 V: 0.002279 JCC: 0.179551
+
+
+
+~! 10 !~
+Accuracy: 163 of 624: 26.122 %
+H: 0.000720 C: 0.000751 V: 0.000735 JCC: 0.148131
+
+
+
+~! 12 !~
+Accuracy: 173 of 624: 27.724 %
+H: 0.002216 C: 0.002348 V: 0.002280 JCC: 0.152022
+
+
+
+~! 14 !~
+Accuracy: 173 of 624: 27.724 %
+H: 0.003979 C: 0.005025 V: 0.004441 JCC: 0.166318
+
+
+
+~! 16 !~
+Accuracy: 167 of 624: 26.763 %
+H: 0.001867 C: 0.001954 V: 0.001910 JCC: 0.151214
+
+
+
+~! 18 !~
+Accuracy: 164 of 624: 26.282 %
+H: 0.000770 C: 0.000801 V: 0.000785 JCC: 0.147442
+
+
+
+~! 20 !~
+Accuracy: 169 of 624: 27.083 %
+H: 0.001563 C: 0.001712 V: 0.001634 JCC: 0.160378
+
+
+
+~! 22 !~
+Accuracy: 173 of 624: 27.724 %
+H: 0.002097 C: 0.002272 V: 0.002181 JCC: 0.154910
+
+
+
+~! 24 !~
+Accuracy: 166 of 624: 26.603 %
+H: 0.001054 C: 0.001061 V: 0.001058 JCC: 0.141681
+
+
+
+~! 26 !~
+Accuracy: 166 of 624: 26.603 %
+H: 0.000801 C: 0.000840 V: 0.000820 JCC: 0.150660
+
+
+
+~! 28 !~
+Accuracy: 173 of 624: 27.724 %
+H: 0.003645 C: 0.004099 V: 0.003858 JCC: 0.163326
+
+
+
+~! 30 !~
+Accuracy: 167 of 624: 26.763 %
+H: 0.001076 C: 0.001077 V: 0.001076 JCC: 0.140486
+
+
+
+~! 32 !~
+Accuracy: 170 of 624: 27.244 %
+H: 0.001797 C: 0.001859 V: 0.001828 JCC: 0.147357
+
+
+
+~! 34 !~
+Accuracy: 164 of 624: 26.282 %
+H: 0.000769 C: 0.000784 V: 0.000777 JCC: 0.144808
+
+
+
+~! 36 !~
+Accuracy: 162 of 624: 25.962 %
+H: 0.000888 C: 0.000912 V: 0.000900 JCC: 0.145921
+
+
+
+~! 38 !~
+Accuracy: 170 of 624: 27.244 %
+H: 0.002049 C: 0.002053 V: 0.002051 JCC: 0.140998
+
+
+
+~! 40 !~
+Accuracy: 162 of 624: 25.962 %
+H: 0.000371 C: 0.000382 V: 0.000377 JCC: 0.145692
+
+
+
+~! 42 !~
+Accuracy: 164 of 624: 26.282 %
+H: 0.000828 C: 0.000839 V: 0.000833 JCC: 0.143183
+
+
+
+~! 44 !~
+Accuracy: 165 of 624: 26.442 %
+H: 0.001485 C: 0.001509 V: 0.001497 JCC: 0.143819
+
+
+
+~! 46 !~
+Accuracy: 167 of 624: 26.763 %
+H: 0.001282 C: 0.001328 V: 0.001305 JCC: 0.147796
+
+
+
+~! 48 !~
+Accuracy: 168 of 624: 26.923 %
+H: 0.001565 C: 0.001597 V: 0.001581 JCC: 0.144820
+
+
+
+~! 50 !~
+Accuracy: 165 of 624: 26.442 %
+H: 0.000657 C: 0.000667 V: 0.000662 JCC: 0.143248
+
+
+
+~! 52 !~
+Accuracy: 171 of 624: 27.404 %
+H: 0.001734 C: 0.001753 V: 0.001743 JCC: 0.143037
+
+
+
+~! 54 !~
+Accuracy: 168 of 624: 26.923 %
+H: 0.001648 C: 0.001656 V: 0.001652 JCC: 0.141507
+
+
+
+~! 56 !~
+Accuracy: 166 of 624: 26.603 %
+H: 0.001365 C: 0.001416 V: 0.001390 JCC: 0.148077
+
+
+
+~! 58 !~
+Accuracy: 167 of 624: 26.763 %
+H: 0.001945 C: 0.001986 V: 0.001966 JCC: 0.145192
+
+
+
+~! 60 !~
+Accuracy: 165 of 624: 26.442 %
+H: 0.000868 C: 0.000877 V: 0.000872 JCC: 0.142441
+
+
+
+~! 62 !~
+Accuracy: 169 of 624: 27.083 %
+H: 0.001474 C: 0.001481 V: 0.001478 JCC: 0.141444
+
+
+
+~! 64 !~
+Accuracy: 166 of 624: 26.603 %
+H: 0.001252 C: 0.001257 V: 0.001254 JCC: 0.141225
+
+
+
+~! 66 !~
+Accuracy: 166 of 624: 26.603 %
+H: 0.000847 C: 0.000851 V: 0.000849 JCC: 0.141166
+
+
+INCREMENT: (66)
+SubClusters: 68
+Accuracy: 195 of 624: 31.250 %
+H: 0.028297 C: 0.009661 V: 0.014404 JCC: 0.014063
+
+
+Final
+Accuracy: 166 of 624: 26.603 %
+H: 0.000847 C: 0.000851 V: 0.000849 JCC: 0.141166
+
+Rows are labels, Columns are Clusters
+
+      0   1   2   3
+  0  39  48  31  40
+  1  38  43  35  40
+  2  43  44  33  35
+  3  39  45  31  40
+
+
+
+Total Time: 4 h 53 m 42.284247 s
+
+
+
+
+Solver:
+net: "_TRAIN_NET.prototxt"
+base_lr: 0.01
+lr_policy: "inv"
+gamma: 0.0001
+power: 0.75
+momentum: 0.9
+max_iter: 10000
+display: 1000
+weight_decay: 0.000000
+solver_mode: GPU

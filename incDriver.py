@@ -213,9 +213,17 @@ def loadCSV(filename, image=False):
 
 def loadImage(filename):
     #print "Loading images:", filename
-    transformer = caffe.io.Transformer({'data':(1,1, 64, 64)})
+    transformer = caffe.io.Transformer({'data':(1,3, 227, 227)})
     transformer.set_transpose('data', (2,0,1))
-    im =  transformer.preprocess("data", caffe.io.load_image(filename, color=False))
+    mean = np.load('_pretrained/imagenet/imagenet_mean.npy').reshape([3,256,256]).mean(1).mean(1)
+    #print mean.shape, mean.ndim
+    transformer.set_mean('data', mean)
+
+    transformer.set_raw_scale('data', 255)
+    transformer.set_channel_swap('data', (2,1,0))
+
+    im =  transformer.preprocess("data", caffe.io.load_image(filename, color=True))
+    #print im.shape
     return im
 
 
@@ -275,7 +283,7 @@ def testIncrement(args, increment, alg="INCREMENT"):
     increment.subcluster(labeler = lambda p: p.label, **args)
     increment.selectRepresentatives(labeler = lambda p: p.label, **args)
     
-    for i in range(1,len(increment.subclusters),1):
+    for i in range(2,len(increment.subclusters),args['skip']):
         args["num_queries"] = i
         increment.generateFeedback(labeler = lambda p: p.label, **args)
         increment.mergeSubclusters(labeler = lambda p: p.label, **args)
@@ -318,7 +326,7 @@ def main(args):
 
     validation.printMetrics(clusters)
 
-    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose, convolution=args.convolution)
+    increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose, convolution=args.convolution, finetune=args.finetune)
     if not args.test:
         runIncrement(vars(args),increment)
     else:
@@ -417,7 +425,11 @@ if __name__ == "__main__":
     parser.add_argument("-N", "--normalize", help="Normalize Data", action="store_true")
     parser.add_argument("-I", "--image", help="Specifies that training data is a list of image location paths", action="store_true")
     parser.add_argument("-C", "--convolution", help="Specifies that training data is a list of image location paths", action="store_true")
+    parser.add_argument("-F", "--finetune", help="Specify whether or not to finetune a convolutional model.", action="store_true")
     parser.add_argument("-T", "--test", help="Specifies to run tests using the defined settings. SLOW.", action="store_true")
+    parser.add_argument("-d", "--display", help="Display the OPTICS plots.", action="store_true")
+    parser.add_argument("-S", "--skip", help="Specifies the number of queries to skip while testing.", type=int, default=1)
+    
     
     
     args = parser.parse_args()
