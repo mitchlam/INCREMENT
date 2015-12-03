@@ -1148,7 +1148,8 @@ class SiameseMerging (MergeSubclusters):
         kmeans.fit(feat)
         lbls = kmeans.labels_
         
-        k = len(set(lbls))
+        idx = list(set(lbls))
+        k = len(idx)
     
         clusters = []
         
@@ -1156,7 +1157,7 @@ class SiameseMerging (MergeSubclusters):
             clusters.append([])
             
         for i,x in enumerate(feat):
-            l = lbls[i]
+            l = idx.index(lbls[i])
             clusters[l] += reverseIndex[i]
         
         self.final = clusters

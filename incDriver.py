@@ -283,7 +283,12 @@ def testIncrement(args, increment, alg="INCREMENT"):
     increment.subcluster(labeler = lambda p: p.label, **args)
     increment.selectRepresentatives(labeler = lambda p: p.label, **args)
     
-    for i in range(2,len(increment.subclusters),args['skip']):
+    numSub = len(increment.subclusters)
+    iterate = list(reversed(range(2,numSub,args['skip'])))
+    if iterate[0] != numSub:
+        iterate.insert(0,numSub)
+        
+    for i in iterate:
         args["num_queries"] = i
         increment.generateFeedback(labeler = lambda p: p.label, **args)
         increment.mergeSubclusters(labeler = lambda p: p.label, **args)
