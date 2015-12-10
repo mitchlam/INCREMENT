@@ -55,29 +55,9 @@
 #      'data/faces-expressions.csv -I -k 4 -i complete -S 2')
 
 
-args=('data/faces-expressions.csv -I -k 4 -S 10 -C'
-      'data/faces-expressions.csv -I -i active -S 10 -C'
-      'data/faces-expressions.csv -I -i none -S 10 -C'
-       
-      'data/faces-expressions.csv -I -k 4 -S 10 -C -F'
-      'data/faces-expressions.csv -I -i active -S 10 -C -F'
-      'data/faces-expressions.csv -I -i none -4 10 -C -F'
-       
-      'data/leedsbutterfly.csv -I -k 10 -S 10 -C'
-      'data/leedsbutterfly.csv -I -k 10 -i active -S 10 -C'
-      'data/leedsbutterfly.csv -I -k 10 -i none -S 10 -C'
-       
-      'data/leedsbutterfly.csv -I -k 10 -S 2 -C -F'
+args=('data/leedsbutterfly.csv -I -k 10 -S 4 -C -F'
       'data/leedsbutterfly.csv -I -k 10 -i active -S 10 -C -F'
-      'data/leedsbutterfly.csv -I -k 10 -i none -S 2 -C -F'
-       
-      'data/leaf_1000-images.csv -I -k 60 -S 4 -C'
-      'data/leaf_1000-images.csv -I -k 60 -i active -S 10 -C'
-      'data/leaf_1000-images.csv -I -k 60 -i none -S 4 -C'
-       
-      'data/leaf_1000-images.csv -I -k 60 -S 4 -C -F'
-      'data/leaf_1000-images.csv -I -k 60 -i active -S 10 -C -F'
-      'data/leaf_1000-images.csv -I -k 60 -i none -S 4 -C -F'
+      'data/leedsbutterfly.csv -I -k 10 -i none -S 4 -C -F'
       )
      
 

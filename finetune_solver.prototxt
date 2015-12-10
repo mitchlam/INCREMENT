@@ -4,7 +4,7 @@ lr_policy: "inv"
 gamma: 0.0001
 power: 0.75
 momentum: 0.9
-max_iter: 5000
-display: 1000
+max_iter: 10000
+display: 100
 weight_decay: 0.0005
 solver_mode: GPU

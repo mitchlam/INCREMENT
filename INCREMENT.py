@@ -996,7 +996,7 @@ class SiameseMerging (MergeSubclusters):
     
     def __init__(self, *args, **kwargs):
         super(SiameseMerging, self).__init__(*args, **kwargs)
-        self.batch_size = 5
+        self.batch_size = 10
         self.output_size = 100
         self.train_size= 100000
         

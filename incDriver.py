@@ -272,6 +272,8 @@ def runIncrement(args, increment, alg="INCREMENT"):
     #print "%s: (%d)  --  (%s)" % (alg,increment.num_queries,formatTime(start-end))
     #validation.printMetrics(increment.final)
     
+    return increment.final, increment.subclusters
+    
 def testIncrement(args, increment, alg="INCREMENT"): 
 
     print "Testing INCREMENT"
@@ -287,8 +289,11 @@ def testIncrement(args, increment, alg="INCREMENT"):
     iterate = list(reversed(range(2,numSub,args['skip'])))
     if iterate[0] != numSub:
         iterate.insert(0,numSub)
+    
+    final = []
+    subclusters = []
         
-    for i in iterate:
+    for x,i in enumerate(iterate):
         args["num_queries"] = i
         increment.generateFeedback(labeler = lambda p: p.label, **args)
         increment.mergeSubclusters(labeler = lambda p: p.label, **args)
@@ -299,10 +304,15 @@ def testIncrement(args, increment, alg="INCREMENT"):
         validation.printMetrics(increment.final, printMat=False)
         print
         
+        if x == 0:
+            final = increment.final
+            subclusters = increment.subclusters
+        
         
     
     end = time.time()
 
+    return final
     
 def main(args):
 
@@ -333,9 +343,9 @@ def main(args):
 
     increment = INCREMENT.MergeINCREMENT(clusters, distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose, convolution=args.convolution, finetune=args.finetune)
     if not args.test:
-        runIncrement(vars(args),increment)
+        final, subclusters = runIncrement(vars(args),increment)
     else:
-        testIncrement(vars(args), increment)
+        final, subclusters = testIncrement(vars(args), increment)
 
     '''
     other = INCREMENT.MergeINCREMENT(increment.final,distance=Instance.distance, aggregator=Instance.aggregate, as_array=Instance.as_array, verbose=args.verbose)
@@ -349,11 +359,11 @@ def main(args):
     
     print "INCREMENT: (%d)" % (increment.num_queries)
     print "SubClusters:", len(increment.subclusters)
-    validation.printMetrics(increment.subclusters, printMat=False)
+    validation.printMetrics(subclusters, printMat=False)
     
     print
     print "Final"
-    validation.printMetrics(increment.final)
+    validation.printMetrics(final)
     
     
     '''

@@ -478,7 +478,7 @@ def addConvLeg(n, output_size):
 	n.pool2 = L.Pooling(n.conv2, kernel_size=2, stride=2, pool=P.Pooling.MAX)
 	
 	n.ip1 = L.InnerProduct(n.pool2, param=[dict(name="ip1_w", lr_mult=1), dict(name="ip1_b", lr_mult=2)], num_output=500 , weight_filler=dict(type='xavier'),  bias_filler=dict(type='gaussian', std=0.1))
-	n.r3 = L.TanH(n.ip1, in_place=True)	
+	n.r3 = L.Sigmoid(n.ip1, in_place=True)	
 
 	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=1), dict(name="feat_b", lr_mult=2)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
 	
@@ -520,10 +520,10 @@ def addAlexNetLeg(n, output_size):
 	
 	#6
 	n.ip1 = L.InnerProduct(n.pool5, param=[dict(lr_mult=10), dict(lr_mult=20)], num_output = 500, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
-	n.r1 = L.TanH(n.ip1, in_place=True)
+	n.r1 = L.Sigmoid(n.ip1, in_place=True)
 	
 	#features
-	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=10), dict(name="feat_b", lr_mult=20)], num_output = output_size, weight_filler=dict(type="xavier"),  bias_filler=dict(type='constant'))
+	n.feat = L.InnerProduct(n.ip1, param=[dict(name="feat_w", lr_mult=10), dict(name="feat_b", lr_mult=20)], num_output = output_size, weight_filler=dict(type="gaussian", std=0.01),  bias_filler=dict(type='constant'))
 	
 	
 	
