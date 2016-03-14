@@ -1301,7 +1301,7 @@ class Siamese(SiameseTrainAll, SiameseTestAll):
 class HRMFINCREMENT(OpticsSubclustering, CentroidSelector, ClosestPointFeedback, OracleMatching, HRMFMerge):
     pass
 
-class MergeINCREMENT(RecursiveOPTICS, MedoidSelector, FarthestLabelFeedback, OracleMatching, Siamese):
+class MergeINCREMENT(RecursiveOPTICS, MedoidSelector, FarthestLabelFeedback, OracleMatching, SiameseTestAll):
     pass
 
 class OtherINCREMENT(RecursiveOPTICS, CentroidSelector, FarthestLinkFeedback, OracleMatching, MergeSubclusters):

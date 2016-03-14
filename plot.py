@@ -51,6 +51,10 @@ def percentImprovement(x,y):
 EXT = {"query": "queries.csv", "misc": "misc.csv", "final": "final.csv"}
 MEASURE = ["Accuracy", "Homogeneity", "Completeness", "V-measure", "JCC"]
 COLOR = ['c', 'g', 'b', 'r', 'y'] 
+MARKER = ["o", "x", "|" , "^" , "s"]
+#COLOR = ['r', 'c', 'y', 'b', 'g'] 
+#MARKER = ["o", "x", "|" , "^" , "s"]
+
 
 def main(args):
     filename = args[1]
@@ -69,10 +73,11 @@ def main(args):
     initHeader, initData = loadCSV(filename + EXT["misc"])
     finalHeader, finalData = loadCSV(filename + EXT["final"])
 
-    #print header
-    data = np.array(data, dtype=float)
-    idx = header.index(MEASURE[0])
-    data[:,idx] /= 100
+    if len(data) > 0:
+        #print header
+        data = np.array(data, dtype=float)
+        idx = header.index(MEASURE[0])
+        data[:,idx] /= 100
  
 
     idx = initHeader.index('Alg')
@@ -108,30 +113,41 @@ def main(args):
 
     #print initHeader
     #print initData
+    if len(data) > 0:
+        
+        fig = pl.figure()
+        ax = fig.add_subplot(1,1,1)
+        ax.tick_params(axis='both', labelsize=14)
+        title = "%s: %s" % (dataName,alg)
+        pl.title(title, fontsize=24)
+        pl.ylim([-0.05,1.05])
+        #pl.xlim([0,500])
 
+        for u,(p,c,m) in enumerate(zip(MEASURE, COLOR, MARKER)):
+            
+            #if p == "Completeness" or p == "Homogeneity":
+            #    continue
+            
+            i = header.index(p)
+            ii = initHeader.index(p)
+        
+            markDist =(u,data.shape[0]/10 if data.shape[0] > 10 else 1)
 
+            if alg != "active" and alg != "none":
+                pl.plot(data[:,0], [float(initData[0][ii])] * data.shape[0], "--", color=c, marker=m, markevery=markDist)
+        
+            pl.plot(data[:,0], data[:,i], label=header[i], color=c, marker=m, markevery=markDist)
 
-    
-
-
-    title = "%s: %s" % (dataName,alg)
-    pl.title(title)
-    pl.ylim([-0.05,1.05])
-    for p,c in zip(MEASURE, COLOR):
-        i = header.index(p)
-        ii = initHeader.index(p)
-        pl.plot(data[:,0], [float(initData[0][ii])] * data.shape[0], "--", color=c)
-        pl.plot(data[:,0], data[:,i], label=header[i], color=c)
-
-    pl.legend(loc= 'lower right')
-    pl.xlabel("Queries")
+        pl.legend(loc= 'lower right')
+        pl.xlabel("Queries", fontsize=18)
     
     if outfolder == None:
         pl.show()
     else:
         outfile = "%s/%s_%s%s.png" %(outfolder,dataName.replace(" ", "_"), alg, postfix) 
-        print outfile
-        pl.savefig(outfile)
+        if len(data) > 0:
+            print outfile
+            pl.savefig(outfile)
 
         outfile = "%s/%s_%s%s.csv" % (outfolder, dataName.replace(" ", "_"), alg, postfix)
        

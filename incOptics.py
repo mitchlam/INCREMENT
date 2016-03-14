@@ -284,12 +284,11 @@ def separateClusters(output, minPts, display=False):
         pyplot.plot(reachability, "c")
         pyplot.plot(reach, "k")
     
-        colors =['b^','r^', 'g^', 'm^', 'c^']
-        c = 0
+        colors =['r^', 'g^', 'b^', 'm^', 'c^']
 
         i = 0
-        for cl in clusters:
-            c = (c+1) % len(colors)
+        for c, cl in enumerate(clusters):
+            c = (c) % len(colors)
             for o in cl:
                 pyplot.plot(i,o.reachability, colors[c])
                 i += 1
@@ -301,7 +300,8 @@ def separateClusters(output, minPts, display=False):
     #print "variance:", np.var(reach),",", np.var(forward)
     
     if display:
-        raw_input()
+        #raw_input()
+        pass
     
     return clusters
 

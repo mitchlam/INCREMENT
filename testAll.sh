@@ -55,15 +55,35 @@
 #      'data/faces-expressions.csv -I -k 4 -i complete -S 2')
 
 
-args=('data/leedsbutterfly.csv -I -k 10 -S 4 -C -F'
-      'data/leedsbutterfly.csv -I -k 10 -i active -S 10 -C -F'
-      'data/leedsbutterfly.csv -I -k 10 -i none -S 4 -C -F'
+args=('data/leaf_1000-images.csv -I -k 60 -C -F'
+      'data/leaf_1000-images.csv -i spectral -I -k 60 -C -F'
+      'data/leaf_1000-images.csv -i complete -I -k 60 -C -F'
+
+      'data/leedsbutterfly.csv -I -k 10 -C -F'
+      'data/leedsbutterfly.csv -i spectral -I -k 10 -C -F'
+      'data/leedsbutterfly.csv -i complete -I -k 10 -C -F'
+
+      'data/faces-expressions.csv -I -k 4 -C -F'
+      'data/faces-expressions.csv -i spectral -I -k 4 -C -F'
+      'data/faces-expressions.csv -i complete -I -k 4 -C -F'
+      
+      'data/faces-names.csv -I -k 10 -C -F'
+      'data/faces-names.csv -i spectral -I -k 10 -C -F'
+      'data/faces-names.csv -i complete -I -k 10 -C -F'
+
+      'data/faces-poses.csv -I -k 4 -C -F'
+      'data/faces-poses.csv -i spectral -I -k 4 -C -F'
+      'data/faces-poses.csv -i complete -I -k 4 -C -F'
+
+      'data/faces-eyes.csv -I -k 2 -C -F'
+      'data/faces-eyes.csv -i spectral -I -k 2 -C -F'
+      'data/faces-eyes.csv -i complete -I -k 2 -C -F'
       )
      
 
 for a in "${args[@]}"
 do
-	echo ./incDriver.py $a -T
-	./run.sh $a -T
+	echo ./incDriver.py $a
+	./run.sh $a 
 
 done
