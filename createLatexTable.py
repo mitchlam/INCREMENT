@@ -52,11 +52,12 @@ def main(args):
 
     #Create Header
     cols = measures.shape[1] + 2
-    col_str = " c |" * cols
+    col_str = "|" + " c |" * cols
 
     print "\\begin{tabular}{%s}" % col_str
     #Create dataset names
 
+    print "\\hline"
     datasets = map(lambda d: re.sub("((Faces)|(Leeds) )|( 1000)", "", d), datasets)
 
     dataset_str = " & & " + " & ".join(datasets) + "\\\\"
@@ -72,6 +73,7 @@ def main(args):
         tbl = printTable(m, measures[i*3], measures[i*3 + 1], measures[i*3 + 2])
         print tbl
 
+    print "\\hline"
     print "\\end{tabular}"
 
 if __name__ == "__main__":
